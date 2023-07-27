@@ -21,12 +21,11 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-
-
 namespace fiftyone\pipeline\core\tests;
 
-use fiftyone\pipeline\core\FlowElement;
+use Exception;
 use fiftyone\pipeline\core\BasicListEvidenceKeyFilter;
+use fiftyone\pipeline\core\FlowElement;
 
 class ErrorFlowData extends FlowElement
 {
@@ -34,7 +33,7 @@ class ErrorFlowData extends FlowElement
 
     public function processInternal($flowData)
     {
-        throw new \Exception("Something went wrong");
+        throw new Exception("Something went wrong");
     }
 
     public function getEvidenceKeyFilter()

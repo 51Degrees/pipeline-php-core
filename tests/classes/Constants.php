@@ -23,14 +23,13 @@
 
 namespace fiftyone\pipeline\core\tests;
 
-use fiftyone\pipeline\core\AspectPropertyValue;
-
 /**
  * Constansts used in UACHTests class.
  */
-class Constants {
+class Constants
+{
     const UNKNOWN = "Unknown";
-    const NULL_VALUE = "null";    
+    const NULL_VALUE = "null";
     const ACCEPTCH_BROWSER_VALUE = "SEC-CH-UA,SEC-CH-UA-Full-Version";
     const ACCEPTCH_PLATFORM_VALUE = "SEC-CH-UA-Platform,SEC-CH-UA-Platform-Version";
     const ACCEPTCH_HARDWARE_VALUE = "SEC-CH-UA-Model,SEC-CH-UA-Mobile,SEC-CH-UA-Arch";

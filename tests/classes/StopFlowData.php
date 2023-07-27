@@ -21,12 +21,10 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-
-
 namespace fiftyone\pipeline\core\tests;
 
-use fiftyone\pipeline\core\FlowElement;
 use fiftyone\pipeline\core\BasicListEvidenceKeyFilter;
+use fiftyone\pipeline\core\FlowElement;
 
 class StopFlowData extends FlowElement
 {

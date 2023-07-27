@@ -21,10 +21,6 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-namespace fiftyone\pipeline\core\tests;
-
-require(__DIR__ . "/../vendor/autoload.php");
-
 use PHPUnit\Framework\TestCase;
 
 class ExampleTests extends TestCase

@@ -22,33 +22,25 @@
 	],
     "license": "EUPL-1.2", 
     "type": "library",
+    "autoload": {
+        "psr-4": {
+            "fiftyone\\pipeline\\core\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "fiftyone\\pipeline\\core\\tests\\": "tests/classes/"
+        }
+    },
     "require": {
+        "php": ">=7.1",
+        "ext-ctype": "*",
+        "ext-json": "*",
         "mustache/mustache": "^2.13",
         "tedivm/jshrink": "~1.0"
     },
-    "autoload": {
-        "classmap": [
-            "ElementData.php",
-            "AspectPropertyValue.php",
-            "ElementDataDictionary.php",
-            "Evidence.php",
-            "EvidenceKeyFilter.php",
-            "BasicListEvidenceKeyFilter.php",
-            "FlowData.php",
-            "FlowElement.php",
-            "Logger.php",
-            "Messages.php",
-            "Pipeline.php",
-            "PipelineBuilder.php",
-            "JavascriptBuilder.php",
-            "JsonBundler.php",
-            "SequenceElement.php",
-			"SetHeaderElement.php",
-			"Constants.php",
-			"Utils.php"
-        ]
-    },
     "require-dev": {
-        "kint-php/kint": "^3.3"
+        "kint-php/kint": "^3.3",
+        "phpunit/phpunit": "*"
     }
 }

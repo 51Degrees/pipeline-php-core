@@ -21,35 +21,32 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-require(__DIR__ . "/../vendor/autoload.php");
-
+use fiftyone\pipeline\core\AspectPropertyValue;
+use fiftyone\pipeline\core\ElementDataDictionary;
 use fiftyone\pipeline\core\FlowElement;
 use fiftyone\pipeline\core\PipelineBuilder;
-use fiftyone\pipeline\core\ElementDataDictionary;
-use fiftyone\pipeline\core\AspectPropertyValue;
-
 use PHPUnit\Framework\TestCase;
 
 class TestEngine extends FlowElement
 {
     public $dataKey = "test";
 
-    public $properties = array(
-        "javascript" => array(
+    public $properties = [
+        "javascript" => [
             "type" => "javascript"
-        ),
-        "apvGood" => array(
+        ],
+        "apvGood" => [
             "type" => "string"
-        ),
-        "apvBad" => array(
+        ],
+        "apvBad" => [
             "type" => "string"
-        ),
-        "normal" => array(
+        ],
+        "normal" => [
             "type" => "boolean"
-        )
-    );
+        ]
+    ];
 
-    public function processInternal($FlowData)
+    public function processInternal($flowData)
     {
         $contents = [];
 
@@ -61,21 +58,22 @@ class TestEngine extends FlowElement
 
         $data = new ElementDataDictionary($this, $contents);
 
-        $FlowData->setElementData($data);
+        $flowData->setElementData($data);
     }
 }
 
 class TestPipeline
 {
     public $Pipeline;
+    public $flowData;
 
-    public function __construct($minify = NULL)
+    public function __construct($minify = null)
     {
         if (is_null($minify)) {
-            $pipelineSettings = array();
+            $pipelineSettings = [];
         } else {
-            $jsSettings = array('minify' => $minify);
-            $pipelineSettings = array('javascriptBuilderSettings' => $jsSettings);
+            $jsSettings = ['minify' => $minify];
+            $pipelineSettings = ['javascriptBuilderSettings' => $jsSettings];
         }
         $this->Pipeline = (new PipelineBuilder($pipelineSettings))
             ->add(new TestEngine())
@@ -100,7 +98,6 @@ class DelayedExecutionEngine1 extends FlowElement
 
     public function processInternal($flowData)
     {
-
         $contents = [
             "one" => 1,
             "two" => 2
@@ -129,7 +126,6 @@ class DelayedExecutionEngine2 extends FlowElement
 
     public function processInternal($flowData)
     {
-
         $contents = [
             "one" => 1,
             "two" => 2
@@ -160,7 +156,6 @@ class DelayedExecutionEngine3 extends FlowElement
 
     public function processInternal($flowData)
     {
-
         $contents = [
             "one" => 1,
             "two" => 2,
@@ -183,22 +178,22 @@ class JavaScriptBundlerTests extends TestCase
 
         $FlowData->process();
 
-        $expected = array(
+        $expected = [
             'javascriptProperties' =>
-            array(
-                0 => 'test.javascript',
-            ),
+                [
+                    0 => 'test.javascript',
+                ],
             'test' =>
-            array(
-                'javascript' => 'console.log(\'hello world\')',
-                'apvgood' => 'Value',
-                'apvbad' => null,
-                'apvbadnullreason' => 'No value',
-                'normal' => true,
-            )
-        );
+                [
+                    'javascript' => 'console.log(\'hello world\')',
+                    'apvgood' => 'Value',
+                    'apvbad' => null,
+                    'apvbadnullreason' => 'No value',
+                    'normal' => true,
+                ]
+        ];
 
-        $this->assertEquals($FlowData->jsonbundler->json, $expected);
+        $this->assertEquals($expected, $FlowData->jsonbundler->json);
     }
 
     public function testJavaScriptBuilder_Minify()
@@ -240,14 +235,13 @@ class JavaScriptBundlerTests extends TestCase
 
         $FlowData->process();
 
-        $this->assertEquals($FlowData->evidence->get("query.sequence"), 11);
+        $this->assertEquals(11, $FlowData->evidence->get("query.sequence"));
 
-        $this->assertEquals(count($FlowData->jsonbundler->json["javascriptProperties"]), 0);
+        $this->assertCount(0, $FlowData->jsonbundler->json["javascriptProperties"]);
     }
 
     public function test_jsonbundler_when_delayed_execution_false()
     {
-
         $pipeline = new PipelineBuilder();
 
         $pipeline->add(new DelayedExecutionEngine1());
@@ -259,13 +253,11 @@ class JavaScriptBundlerTests extends TestCase
 
         $expected = json_encode(["one" => 1, "two" => 2]);
         $actual = json_encode($flowData->jsonbundler->json["delayedexecutiontest1"]);
-        $this->assertEquals($actual, $expected);
-
+        $this->assertEquals($expected, $actual);
     }
 
     public function test_jsonbundler_when_delayed_execution_true()
     {
-
         $pipeline = new PipelineBuilder();
 
         $pipeline->add(new DelayedExecutionEngine2());
@@ -283,13 +275,11 @@ class JavaScriptBundlerTests extends TestCase
         ]);
 
         $actual = json_encode($flowData->jsonbundler->json["delayedexecutiontest2"]);
-        $this->assertEquals($actual, $expected);
+        $this->assertEquals($expected, $actual);
     }
-
 
     public function test_jsonbundler_when_delayed_execution_multiple()
     {
-
         $pipeline = new PipelineBuilder();
 
         $pipeline->add(new DelayedExecutionEngine3());
@@ -308,6 +298,6 @@ class JavaScriptBundlerTests extends TestCase
         ]);
 
         $actual = json_encode($flowData->jsonbundler->json["delayedexecutiontest3"]);
-        $this->assertEquals($actual, $expected);
+        $this->assertEquals($expected, $actual);
     }
 }

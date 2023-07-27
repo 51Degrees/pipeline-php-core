@@ -21,17 +21,21 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-
-
 namespace fiftyone\pipeline\core\tests;
 
-use fiftyone\pipeline\core\FlowElement;
-use fiftyone\pipeline\core\ElementDataDictionary;
 use fiftyone\pipeline\core\BasicListEvidenceKeyFilter;
+use fiftyone\pipeline\core\ElementDataDictionary;
+use fiftyone\pipeline\core\FlowElement;
 
 class ExampleFlowElement1 extends FlowElement
 {
     public $dataKey = "example1";
+    public $properties = [
+        "integer" => [
+            "type" => "int"
+        ]
+    ];
+
     public function processInternal($flowData)
     {
         $data = new ElementDataDictionary($this, array("integer" => 5));
@@ -39,12 +43,6 @@ class ExampleFlowElement1 extends FlowElement
         $flowData->setElementData($data);
     }
 
-    public $properties = array(
-        "integer" => array(
-            "type" => "int"
-        )
-    );
-    
     public function getEvidenceKeyFilter()
     {
         return new BasicListEvidenceKeyFilter(["header.user-agent"]);

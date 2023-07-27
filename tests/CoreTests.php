@@ -21,21 +21,12 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-namespace fiftyone\pipeline\core\tests;
-
-require(__DIR__ . "/../vendor/autoload.php");
-
-require(__DIR__ . "/classes/TestPipeline.php");
-
 use fiftyone\pipeline\core\PipelineBuilder;
-
-use fiftyone\pipeline\core\tests\ErrorFlowData;
-use fiftyone\pipeline\core\tests\StopFlowData;
-use fiftyone\pipeline\core\tests\MemoryLogger;
 use fiftyone\pipeline\core\tests\ExampleFlowElement1;
 use fiftyone\pipeline\core\tests\ExampleFlowElement2;
-use fiftyone\pipeline\core\tests\TestPipelineBuilder;
-
+use fiftyone\pipeline\core\tests\MemoryLogger;
+use fiftyone\pipeline\core\tests\StopFlowData;
+use fiftyone\pipeline\core\tests\TestPipeline;
 use PHPUnit\Framework\TestCase;
 
 class CoreTests extends TestCase
@@ -45,15 +36,15 @@ class CoreTests extends TestCase
     {
         $testPipeline = new TestPipeline();
         $loggerMessage = $testPipeline->logger->log[0]["message"];
-        $this->assertTrue($loggerMessage === "test");
+        $this->assertSame("test", $loggerMessage);
     }
-    
+
     // Test getting evidence
     public function testEvidence()
     {
         $testPipeline = new TestPipeline();
         $userAgent = $testPipeline->flowData->evidence->get("header.user-agent");
-        $this->assertTrue($userAgent === "test");
+        $this->assertSame("test", $userAgent);
     }
 
     // Test filtering evidence
@@ -61,7 +52,7 @@ class CoreTests extends TestCase
     {
         $testPipeline = new TestPipeline();
         $nullEvidence = $testPipeline->flowData->evidence->get("header.other-evidence");
-        $this->assertTrue($nullEvidence === null);
+        $this->assertNull($nullEvidence);
     }
 
     // Test Getter methods
@@ -69,21 +60,23 @@ class CoreTests extends TestCase
     {
         $testPipeline = new TestPipeline();
         $getValue = $testPipeline->flowData->get("example1")->get("integer");
-        $this->assertTrue($getValue === 5);
+        $this->assertSame(5, $getValue);
     }
 
     public function testGetWhere()
     {
         $testPipeline = new TestPipeline();
-        $getValue = count($testPipeline->flowData->getWhere("type", "int"));
-        $this->assertTrue($getValue === 1);
+        $this->assertCount(
+            1,
+            $testPipeline->flowData->getWhere("type", "int")
+        );
     }
 
     public function testGetFromElement()
     {
         $testPipeline = new TestPipeline();
         $getValue = $testPipeline->flowData->getFromElement($testPipeline->flowElement1)->get("integer");
-        $this->assertTrue($getValue === 5);
+        $this->assertSame(5, $getValue);
     }
 
     // Test check stop FlowData works
@@ -94,22 +87,20 @@ class CoreTests extends TestCase
         try {
             $getValue = $testPipeline->flowData->get("example2");
             $this->fail();
-        }
-        catch (\Exception $e) {
+        } catch (Exception $e) {
             // An exception should be thrown.
         }
-        $this->assertTrue($getValue === null);
+        $this->assertNull($getValue);
     }
 
     // Test exception is thrown when not suppressed.
-    public function testErrors_DontSuppressException() {
-
+    public function testErrors_DontSuppressException()
+    {
         try {
             $testPipeline = new TestPipeline(false);
             $this->fail("Exception is expected.");
-        }
-        catch (\Exception $e) {
-            $this->assertTrue(!empty($e->getMessage()));
+        } catch (Exception $e) {
+            $this->assertNotEmpty($e->getMessage());
         }
     }
 
@@ -118,39 +109,38 @@ class CoreTests extends TestCase
     {
         $testPipeline = new TestPipeline();
         $getValue = $testPipeline->flowData->errors["error"];
-        $this->assertTrue(isset($getValue));
+        $this->assertNotEmpty($getValue);
     }
 
     // Test Already Processed FlowData.
-    public function testErrors_AlreadyProcessed() {
-
-            $logger = new MemoryLogger("info");
-            $flowElement1 = new ExampleFlowElement1();
-            $pipeline = (new PipelineBuilder())
-                ->add($flowElement1)
-                ->addLogger($logger)
-                ->build();
-            $flowData = $pipeline->createFlowData();
-            $flowData->process();
+    public function testErrors_AlreadyProcessed()
+    {
+        $logger = new MemoryLogger("info");
+        $flowElement1 = new ExampleFlowElement1();
+        $pipeline = (new PipelineBuilder())
+            ->add($flowElement1)
+            ->addLogger($logger)
+            ->build();
+        $flowData = $pipeline->createFlowData();
+        $flowData->process();
         try {
             $flowData->process();
             $this->fail("Exception is expected.");
-        }
-        catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->assertEquals($e->getMessage(), "FlowData already processed");
         }
     }
-        
+
     // Test if adding properties at a later stage works (for cloud FlowElements for example)
     public function testUpdateProperties()
     {
         $flowElement1 = new ExampleFlowElement1();
         $logger = new MemoryLogger("info");
         $pipeline = (new PipelineBuilder())->add($flowElement1)
-        ->add(new StopFlowData())
-        ->add(new ExampleFlowElement2())
-        ->addLogger($logger)
-        ->build();
+            ->add(new StopFlowData())
+            ->add(new ExampleFlowElement2())
+            ->addLogger($logger)
+            ->build();
         $flowElement1->properties["integer"]["testing"] = "true";
         $flowData = $pipeline->createFlowData();
         $flowData->evidence->set("header.user-agent", "test");
@@ -158,9 +148,9 @@ class CoreTests extends TestCase
         $flowData->process();
 
         $getValue = count($flowData->getWhere("testing", "true"));
-        $this->assertTrue($getValue === 0);
+        $this->assertSame(0, $getValue);
         $flowElement1->updatePropertyList();
         $getValue = count($flowData->getWhere("testing", "true"));
-        $this->assertTrue($getValue === 1);
+        $this->assertSame(1, $getValue);
     }
 }

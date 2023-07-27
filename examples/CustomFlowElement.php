@@ -22,24 +22,23 @@
  * ********************************************************************* */
 
 /**
-* @example CustomFlowElement.php
-*
-* This example demonstrates the creation of a custom flow element. In this case
-* the FlowElement takes the results of a client side form collecting
-* date of birth, setting this as evidence on a FlowData object to calculate
-* a person's starsign. The FlowElement also serves additional JavaScript
-* which gets a user's geolocation and saves the latitude as a cookie.
-* This latitude is also then passed in to the FlowData to calculate if
-* a person is in the northern or southern hemispheres.
-
-*/
+ * @example CustomFlowElement.php
+ *
+ * This example demonstrates the creation of a custom flow element. In this case
+ * the FlowElement takes the results of a client side form collecting
+ * date of birth, setting this as evidence on a FlowData object to calculate
+ * a person's starsign. The FlowElement also serves additional JavaScript
+ * which gets a user's geolocation and saves the latitude as a cookie.
+ * This latitude is also then passed in to the FlowData to calculate if
+ * a person is in the northern or southern hemispheres.
+ */
 
 include(__DIR__ . "/../vendor/autoload.php");
 
-use fiftyone\pipeline\core\PipelineBuilder;
 use fiftyone\pipeline\core\BasicListEvidenceKeyFilter;
-use fiftyone\pipeline\core\FlowElement;
 use fiftyone\pipeline\core\ElementDataDictionary;
+use fiftyone\pipeline\core\FlowElement;
+use fiftyone\pipeline\core\PipelineBuilder;
 
 // Function to get star sign from month and day
 function getStarSign($month, $day)
@@ -69,7 +68,7 @@ function getStarSign($month, $day)
     } elseif (($month == 11 && $day >= 23) || ($month == 12 && $day <= 21)) {
         return "sagittarius";
     }
-};
+}
 
 //! [class]
 //! [declaration]
@@ -83,15 +82,30 @@ class AstrologyFlowElement extends FlowElement
 
     // The processInternal function is the core working of a FlowElement.
     // It takes FlowData, reads evidence and returns data.
+    public $properties = array(
+        "starSign" => array(
+            "type" => "string",
+            "description" => "the user's starsign"
+        ),
+        "hemisphere" => array(
+            "type" => "string",
+            "description" => "the user's hemisphere"
+        ),
+        "getLatitude" => array(
+            "type" => "javascript",
+            "description" => "JavaScript used to get a user's latitude"
+        )
+    );
+
     public function processInternal($FlowData)
     {
         $result = [];
 
-        
+
         // Get the date of birth from the query string (submitted through
         // a form on the client side)
         $dateOfBirth = $FlowData->evidence->get("query.dateOfBirth");
-        
+
         if ($dateOfBirth) {
             $dateOfBirth = explode("-", $dateOfBirth);
 
@@ -123,24 +137,8 @@ class AstrologyFlowElement extends FlowElement
         $FlowData->setElementData($data);
     }
 
-    public $properties = array(
-        "starSign" => array(
-            "type" => "string",
-            "description" => "the user's starsign"
-        ),
-        "hemisphere" => array(
-            "type" => "string",
-            "description" => "the user's hemisphere"
-        ),
-        "getLatitude" => array(
-            "type" => "javascript",
-            "description" => "JavaScript used to get a user's latitude"
-        )
-    );
-
     public function getEvidenceKeyFilter()
     {
-
         // A filter (in this case a basic list) stating which evidence
         // the FlowElement is interested in
         return new BasicListEvidenceKeyFilter(["cookie.latitude", "query.dateOfBirth"]);
@@ -160,7 +158,9 @@ $javascriptBuilderSettings = array(
 
 // Make the Pipeline and add the element we want to it
 
-$Pipeline = (new PipelineBuilder(["javascriptBuilderSettings"=>$javascriptBuilderSettings]))->add(new AstrologyFlowElement())->build();
+$Pipeline = (new PipelineBuilder(["javascriptBuilderSettings" => $javascriptBuilderSettings]))->add(
+    new AstrologyFlowElement()
+)->build();
 
 $FlowData = $Pipeline->createFlowData();
 

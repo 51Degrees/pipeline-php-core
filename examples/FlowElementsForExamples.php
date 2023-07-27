@@ -1,5 +1,4 @@
 <?php
-
 /* *********************************************************************
  * This Original Work is copyright of 51 Degrees Mobile Experts Limited.
  * Copyright 2022 51 Degrees Mobile Experts Limited, Davidson House,
@@ -22,27 +21,27 @@
  * such notice(s) shall fulfill the requirements of that article.
  * ********************************************************************* */
 
-use fiftyone\pipeline\core\FlowElement;
-use fiftyone\pipeline\core\ElementDataDictionary;
 use fiftyone\pipeline\core\BasicListEvidenceKeyFilter;
+use fiftyone\pipeline\core\ElementDataDictionary;
+use fiftyone\pipeline\core\FlowElement;
 
 // Two simple FlowElements
 
 class ExampleFlowElementA extends FlowElement
 {
     public $dataKey = "example1";
+    public $properties = array(
+        "exampleProperty1" => array(
+            "type" => "int"
+        )
+    );
+
     public function processInternal($FlowData)
     {
         $data = new ElementDataDictionary($this, array("exampleProperty1" => 5));
 
         $FlowData->setElementData($data);
     }
-
-    public $properties = array(
-        "exampleProperty1" => array(
-            "type" => "int"
-        )
-    );
 
     public function getEvidenceKeyFilter()
     {
@@ -53,6 +52,11 @@ class ExampleFlowElementA extends FlowElement
 class ExampleFlowElementB extends FlowElement
 {
     public $dataKey = "example2";
+    public $properties = array(
+        "exampleProperty2" => array(
+            "type" => "int"
+        )
+    );
 
     public function processInternal($FlowData)
     {
@@ -60,12 +64,6 @@ class ExampleFlowElementB extends FlowElement
 
         $FlowData->setElementData($data);
     }
-
-    public $properties = array(
-        "exampleProperty2" => array(
-            "type" => "int"
-        )
-    );
 
     public function getEvidenceKeyFilter()
     {
