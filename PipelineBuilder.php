@@ -114,11 +114,42 @@ class PipelineBuilder
     */
     public function build()
     {
-        $this->flowElements = array_merge($this->flowElements, 
-                                        $this->getJavaScriptElements(), 
-                                        $this->getSetHeaderElements());
+        $this->flowElements = $this->generateElements();
 
         return new Pipeline($this->flowElements, $this->settings);
+    }
+
+    private function generateElements()
+    {
+        $javascriptElements = $this->getJavaScriptElements();
+        $setHeaderElements = $this->getSetHeaderElements();
+
+        $javascriptBuilderElementFilter = function ($element) {
+            return !empty($element->settings['_endpoint']);
+        };
+
+        return array(
+            $this->findElement([], "fiftyone\pipeline\devicedetection\DeviceDetectionOnPremise"),
+            $this->findElement($javascriptElements, SequenceElement::class),
+            $this->findElement($javascriptElements, JsonBundlerElement::class),
+            $this->findElement($javascriptElements, JavascriptBuilderElement::class, $javascriptBuilderElementFilter),
+            $this->findElement($setHeaderElements, SetHeaderElement::class)
+        );
+    }
+
+    private function findElement($elements, $class, $additionalFilter = null)
+    {
+        $typeFilter = function ($element) use ($class) {
+            return $element instanceof $class;
+        };
+
+        $result = array_filter(array_merge($elements, $this->flowElements), $typeFilter);
+
+        if ($additionalFilter !== null) {
+            $result = array_filter($result, $additionalFilter);
+        }
+
+        return reset($result);
     }
 
     /**
