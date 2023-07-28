@@ -114,42 +114,37 @@ class PipelineBuilder
     */
     public function build()
     {
-        $this->flowElements = $this->generateElements();
+        $this->flowElements = $this->getUniqueElements();
 
         return new Pipeline($this->flowElements, $this->settings);
     }
 
-    private function generateElements()
+    /**
+     * Prefer elements from the json config and ensure correct element order
+     * according to the spec.
+     *
+     * @return array
+     */
+    private function getUniqueElements()
     {
-        $javascriptElements = $this->getJavaScriptElements();
-        $setHeaderElements = $this->getSetHeaderElements();
-
-        $javascriptBuilderElementFilter = function ($element) {
-            return !empty($element->settings['_endpoint']);
-        };
-
-        return array(
-            $this->findElement([], "fiftyone\pipeline\devicedetection\DeviceDetectionOnPremise"),
-            $this->findElement($javascriptElements, SequenceElement::class),
-            $this->findElement($javascriptElements, JsonBundlerElement::class),
-            $this->findElement($javascriptElements, JavascriptBuilderElement::class, $javascriptBuilderElementFilter),
-            $this->findElement($setHeaderElements, SetHeaderElement::class)
+        // concatenate json config, javascript and set-header elements
+        $elements = array_merge(
+            $this->flowElements,
+            $this->getJavaScriptElements(),
+            $this->getSetHeaderElements()
         );
-    }
 
-    private function findElement($elements, $class, $additionalFilter = null)
-    {
-        $typeFilter = function ($element) use ($class) {
-            return $element instanceof $class;
-        };
+        $uniqueElements = array();
 
-        $result = array_filter(array_merge($elements, $this->flowElements), $typeFilter);
-
-        if ($additionalFilter !== null) {
-            $result = array_filter($result, $additionalFilter);
+        // reverse order to ensure javascript and set-header elements get
+        // overwritten by json config elements
+        foreach (array_reverse($elements) as $element) {
+            // remove duplicates by overwriting existing data keys
+            $uniqueElements[$element->dataKey] = $element;
         }
 
-        return reset($result);
+        // restore element order and remove string keys
+        return array_values(array_reverse($uniqueElements));
     }
 
     /**
