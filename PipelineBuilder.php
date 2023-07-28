@@ -114,7 +114,7 @@ class PipelineBuilder
     */
     public function build()
     {
-        $this->flowElements = $this->getUniqueElements();
+        $this->flowElements = $this->getPipelineElements();
 
         return new Pipeline($this->flowElements, $this->settings);
     }
@@ -125,26 +125,28 @@ class PipelineBuilder
      *
      * @return array
      */
-    private function getUniqueElements()
+    private function getPipelineElements()
     {
-        // concatenate json config, javascript and set-header elements
-        $elements = array_merge(
-            $this->flowElements,
+        $otherElements = array_merge(
             $this->getJavaScriptElements(),
             $this->getSetHeaderElements()
         );
+        $sequence = array_shift($otherElements);
 
-        $uniqueElements = array();
+        foreach ($otherElements as $element) {
+            foreach ($this->flowElements as $flowElement) {
+                // skip $element if present in $this->flowElements
+                if ($element->dataKey === $flowElement->dataKey) {
+                    continue 2;
+                }
+            }
 
-        // reverse order to ensure javascript and set-header elements get
-        // overwritten by json config elements
-        foreach (array_reverse($elements) as $element) {
-            // remove duplicates by overwriting existing data keys
-            $uniqueElements[$element->dataKey] = $element;
+            // append $element when missing from $this->flowElements
+            $this->flowElements[] = $element;
         }
 
-        // restore element order and remove string keys
-        return array_values(array_reverse($uniqueElements));
+        // ensure correct element order
+        return array_merge([$sequence], $this->flowElements);
     }
 
     /**
