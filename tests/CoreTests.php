@@ -171,6 +171,9 @@ class CoreTests extends TestCase
     {
         $configFile = __DIR__ . '/testWebConfig.json';
 
+        $pipeline = (new PipelineBuilder())->add(new SequenceElement())->build();
+        $this->assertSame(get_class(reset($pipeline->flowElements)), SequenceElement::class);
+
         $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
         $this->assertSame(get_class(reset($pipeline->flowElements)), SequenceElement::class);
 
@@ -185,6 +188,9 @@ class CoreTests extends TestCase
     public function testSetHeaderElementIsAlwaysLastInPipeline()
     {
         $configFile = __DIR__ . '/testWebConfig.json';
+
+        $pipeline = (new PipelineBuilder())->add(new SetHeaderElement())->build();
+        $this->assertSame(get_class(end($pipeline->flowElements)), SetHeaderElement::class);
 
         $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
         $this->assertSame(get_class(end($pipeline->flowElements)), SetHeaderElement::class);
@@ -204,6 +210,9 @@ class CoreTests extends TestCase
             return $element instanceof SequenceElement;
         };
 
+        $pipeline = (new PipelineBuilder())->add(new SequenceElement())->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
         $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
         $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
 
@@ -222,6 +231,9 @@ class CoreTests extends TestCase
             return $element instanceof JavascriptBuilderElement;
         };
 
+        $pipeline = (new PipelineBuilder())->add(new JavascriptBuilderElement())->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
         $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
         $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
 
@@ -239,6 +251,9 @@ class CoreTests extends TestCase
         $filter = function ($element) {
             return $element instanceof SetHeaderElement;
         };
+
+        $pipeline = (new PipelineBuilder())->add(new SetHeaderElement())->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
 
         $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
         $this->assertCount(1, array_filter($pipeline->flowElements, $filter));

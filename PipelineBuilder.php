@@ -132,7 +132,7 @@ class PipelineBuilder
             $this->getSetHeaderElements()
         );
 
-        // remove sequence, jsonbundler, javascriptbuilder duplicates
+        // remove sequence, jsonbundler, javascriptbuilder element duplicates
         foreach ($otherElements as $element) {
             foreach ($this->flowElements as $flowElement) {
                 // skip $element if present in $this->flowElements
@@ -145,25 +145,35 @@ class PipelineBuilder
             $this->flowElements[] = $element;
         }
 
-        // find the sequence element by dataKey
-        $sequence = $otherElements[0];
-        $offset = array_search(
-            $sequence->dataKey,
-            array_map(
-                function ($flowElement) {
-                    return $flowElement->dataKey;
-                },
-                $this->flowElements
-            )
+        // find the sequence element and prepend it to the list of elements
+        array_unshift(
+            $this->flowElements,
+            $this->extractFlowElementByType(reset($otherElements)->dataKey)
         );
 
-        // when found, extract it from the list of elements
-        if ($offset !== false) {
-            $sequence = array_splice($this->flowElements, $offset, 1)[0];
+        // find the set-headers element and append it to the list of elements
+        array_push(
+            $this->flowElements,
+            $this->extractFlowElementByType(end($otherElements)->dataKey)
+        );
+
+        return array_filter($this->flowElements);
+    }
+
+    private function extractFlowElementByType($type)
+    {
+        foreach ($this->flowElements as $index => $flowElement) {
+            if ($flowElement->dataKey === $type) {
+                $position = $index;
+                break;
+            }
         }
 
-        // ensure the sequence element is the first one in the pipeline
-        return array_merge([$sequence], $this->flowElements);
+        if (isset($position)) {
+            return array_splice($this->flowElements, $position, 1)[0];
+        }
+
+        return null;
     }
 
     /**

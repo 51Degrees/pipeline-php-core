@@ -8,6 +8,9 @@
         "BuilderName": "fiftyone\\pipeline\\core\\SequenceElement"
       },
       {
+        "BuilderName": "fiftyone\\pipeline\\core\\SetHeaderElement"
+      },
+      {
         "BuilderName": "fiftyone\\pipeline\\core\\JavascriptBuilderElement",
         "BuildParameters": {
           "endpoint": "/json",
