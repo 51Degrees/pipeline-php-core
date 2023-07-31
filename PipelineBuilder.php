@@ -131,8 +131,8 @@ class PipelineBuilder
             $this->getJavaScriptElements(),
             $this->getSetHeaderElements()
         );
-        $sequence = array_shift($otherElements);
 
+        // remove sequence, jsonbundler, javascriptbuilder duplicates
         foreach ($otherElements as $element) {
             foreach ($this->flowElements as $flowElement) {
                 // skip $element if present in $this->flowElements
@@ -145,7 +145,24 @@ class PipelineBuilder
             $this->flowElements[] = $element;
         }
 
-        // ensure correct element order
+        // find the sequence element by dataKey
+        $sequence = $otherElements[0];
+        $offset = array_search(
+            $sequence->dataKey,
+            array_map(
+                function ($flowElement) {
+                    return $flowElement->dataKey;
+                },
+                $this->flowElements
+            )
+        );
+
+        // when found, extract it from the list of elements
+        if ($offset !== false) {
+            $sequence = array_splice($this->flowElements, $offset, 1)[0];
+        }
+
+        // ensure the sequence element is the first one in the pipeline
         return array_merge([$sequence], $this->flowElements);
     }
 
