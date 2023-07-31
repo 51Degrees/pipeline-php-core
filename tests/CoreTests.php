@@ -27,8 +27,11 @@ require(__DIR__ . "/../vendor/autoload.php");
 
 require(__DIR__ . "/classes/TestPipeline.php");
 
+use fiftyone\pipeline\core\JavascriptBuilderElement;
 use fiftyone\pipeline\core\PipelineBuilder;
 
+use fiftyone\pipeline\core\SequenceElement;
+use fiftyone\pipeline\core\SetHeaderElement;
 use fiftyone\pipeline\core\tests\ErrorFlowData;
 use fiftyone\pipeline\core\tests\StopFlowData;
 use fiftyone\pipeline\core\tests\MemoryLogger;
@@ -162,5 +165,89 @@ class CoreTests extends TestCase
         $flowElement1->updatePropertyList();
         $getValue = count($flowData->getWhere("testing", "true"));
         $this->assertTrue($getValue === 1);
+    }
+
+    public function testSequenceElementIsAlwaysFirstInPipeline()
+    {
+        $configFile = __DIR__ . '/testWebConfig.json';
+
+        $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
+        $this->assertSame(get_class(reset($pipeline->flowElements)), SequenceElement::class);
+
+        $pipeline = (new PipelineBuilder())->build();
+        $this->assertSame(get_class(reset($pipeline->flowElements)), SequenceElement::class);
+
+        $config = json_decode(file_get_contents($configFile), true);
+        $pipeline = (new PipelineBuilder($config))->build();
+        $this->assertSame(get_class(reset($pipeline->flowElements)), SequenceElement::class);
+    }
+
+    public function testSetHeaderElementIsAlwaysLastInPipeline()
+    {
+        $configFile = __DIR__ . '/testWebConfig.json';
+
+        $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
+        $this->assertSame(get_class(end($pipeline->flowElements)), SetHeaderElement::class);
+
+        $pipeline = (new PipelineBuilder())->build();
+        $this->assertSame(get_class(end($pipeline->flowElements)), SetHeaderElement::class);
+
+        $config = json_decode(file_get_contents($configFile), true);
+        $pipeline = (new PipelineBuilder($config))->build();
+        $this->assertSame(get_class(end($pipeline->flowElements)), SetHeaderElement::class);
+    }
+
+    public function testPipelineDoesntHaveDuplicateSequenceElements()
+    {
+        $configFile = __DIR__ . '/testWebConfig.json';
+        $filter = function ($element) {
+            return $element instanceof SequenceElement;
+        };
+
+        $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
+        $pipeline = (new PipelineBuilder())->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
+        $config = json_decode(file_get_contents($configFile), true);
+        $pipeline = (new PipelineBuilder($config))->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+    }
+
+    public function testPipelineDoesntHaveDuplicateJavascriptBuilderElements()
+    {
+        $configFile = __DIR__ . '/testWebConfig.json';
+        $filter = function ($element) {
+            return $element instanceof JavascriptBuilderElement;
+        };
+
+        $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
+        $pipeline = (new PipelineBuilder())->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
+        $config = json_decode(file_get_contents($configFile), true);
+        $pipeline = (new PipelineBuilder($config))->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+    }
+
+    public function testPipelineDoesntHaveDuplicateSetHeaderElements()
+    {
+        $configFile = __DIR__ . '/testWebConfig.json';
+        $filter = function ($element) {
+            return $element instanceof SetHeaderElement;
+        };
+
+        $pipeline = (new PipelineBuilder())->buildFromConfig($configFile)->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
+        $pipeline = (new PipelineBuilder())->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
+
+        $config = json_decode(file_get_contents($configFile), true);
+        $pipeline = (new PipelineBuilder($config))->build();
+        $this->assertCount(1, array_filter($pipeline->flowElements, $filter));
     }
 }
