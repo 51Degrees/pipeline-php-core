@@ -27,8 +27,7 @@
         "ext-ctype": "*",
         "ext-json": "*",
         "mustache/mustache": "^2.13",
-        "tedivm/jshrink": "~1.0",
-        "51degrees/fiftyone.pipeline.javascript-templates": "1.*"
+        "tedivm/jshrink": "~1.0"
     },
     "require-dev": {
         "kint-php/kint": "^3.3",
@@ -43,12 +42,5 @@
         "psr-4": {
             "fiftyone\\pipeline\\core\\tests\\": "tests/"
         }
-    },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/51Degrees/javascript-templates",
-            "no-api": true
-        }
-    ]
+    }
 }
