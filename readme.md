@@ -49,3 +49,6 @@ To run the tests in this repository, make sure PHPUnit is installed then, in the
 ```
 phpunit --fail-on-warning --display-warnings --log-junit test-results.xml
 ```
+
+## Mustache template
+`javascript-templates` is not a full-fledged PHP package installable via `composer`, however, it is shipped as a regularly updated, static dependency of this package.
