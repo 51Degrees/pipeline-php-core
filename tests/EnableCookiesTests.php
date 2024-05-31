@@ -28,6 +28,8 @@ use fiftyone\pipeline\core\ElementDataDictionary;
 use fiftyone\pipeline\core\FlowElement;
 use fiftyone\pipeline\core\PipelineBuilder;
 use fiftyone\pipeline\core\JavascriptBuilderElement;
+use fiftyone\pipeline\core\SequenceElement;
+use fiftyone\pipeline\core\JsonBundlerElement;
 use PHPUnit\Framework\TestCase;
 
 class CookieElement extends FlowElement
