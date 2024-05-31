@@ -27,6 +27,7 @@ use fiftyone\pipeline\core\AspectPropertyValue;
 use fiftyone\pipeline\core\ElementDataDictionary;
 use fiftyone\pipeline\core\FlowElement;
 use fiftyone\pipeline\core\PipelineBuilder;
+use fiftyone\pipeline\core\JavascriptBuilderElement;
 use PHPUnit\Framework\TestCase;
 
 class CookieElement extends FlowElement
