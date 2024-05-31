@@ -76,7 +76,7 @@ class EnableCookiesTests extends TestCase
         $pipeline = (new PipelineBuilder())
             ->add(new CookieElement())
             ->add(new SequenceElement())
-            ->add(new JsonBundlerElement)
+            ->add(new JsonBundlerElement())
             ->add($jsElement)
             ->build();
 
