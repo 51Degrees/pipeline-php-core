@@ -54,18 +54,23 @@ class CookieElement extends FlowElement
 
 class EnableCookiesTests extends TestCase
 {
-    public function providerJavaScriptCookies()
+    public function provider_testJavaScriptCookies()
     {
-        return array(
-            array(false, false, false),
-            array(true, false, false),
-            array(false, true, true),
-            array(true, true, true)
-        );
+        return [
+            [false, false, false],
+            [true, false, false],
+            [false, true, true],
+            [true, true, true]
+        ];
     }
 
     /**
-     * @dataProvider providerJavaScriptCookies
+     * Test that the cookie settings are respected correctly.
+     * 
+     * @dataProvider provider_testJavaScriptCookies
+     * @param mixed $enableInConfig
+     * @param mixed $enableInEvidence
+     * @param mixed $expectCookie
      */
     public function testJavaScriptCookies($enableInConfig, $enableInEvidence, $expectCookie)
     {
