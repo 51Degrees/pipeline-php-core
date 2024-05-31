@@ -69,7 +69,7 @@ class EnableCookiesTests extends TestCase
      */
     public function testJavaScriptCookies($enableInConfig, $enableInEvidence, $expectCookie)
     {
-        $jsElement = JavascriptBuilderElement([
+        $jsElement = new JavascriptBuilderElement([
             'enableCookies' => $enableInConfig
         ]);
 
