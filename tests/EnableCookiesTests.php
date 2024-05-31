@@ -73,7 +73,7 @@ class EnableCookiesTests extends TestCase
             'enableCookies' => $enableInConfig
         ]);
 
-        $pipeline = new PipelineBuilder()
+        $pipeline = (new PipelineBuilder())
             ->add(new CookieElement())
             ->add(new SequenceElement())
             ->add(new JsonBundlerElement)
