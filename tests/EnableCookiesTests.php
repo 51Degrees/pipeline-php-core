@@ -31,6 +31,7 @@ use fiftyone\pipeline\core\JavascriptBuilderElement;
 use fiftyone\pipeline\core\SequenceElement;
 use fiftyone\pipeline\core\JsonBundlerElement;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\TestWith;
 
 class CookieElement extends FlowElement
 {
@@ -57,24 +58,13 @@ class CookieElement extends FlowElement
 
 class EnableCookiesTests extends TestCase
 {
-    public function provider_testJavaScriptCookies()
-    {
-        return [
-            [false, false, false],
-            [true, false, false],
-            [false, true, true],
-            [true, true, true]
-        ];
-    }
-
     /**
      * Test that the cookie settings are respected correctly.
-     * 
-     * @dataProvider provider_testJavaScriptCookies
-     * @param mixed $enableInConfig
-     * @param mixed $enableInEvidence
-     * @param mixed $expectCookie
      */
+    #[TestWith([false, false, false])]
+    #[TestWith([true, false, false])]
+    #[TestWith([false, true, true])]
+    #[TestWith([true, true, true])]
     public function testJavaScriptCookies($enableInConfig, $enableInEvidence, $expectCookie)
     {
         $jsElement = new JavascriptBuilderElement([
