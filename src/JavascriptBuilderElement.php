@@ -170,7 +170,7 @@ class JavascriptBuilderElement extends FlowElement
 
         $enableCookies = $flowData->evidence->get('query.fod-js-enable-cookies');
         if ($enableCookies !== null) {
-            $vars['_enableCookies'] = $enableCookies;
+            $vars['_enableCookies'] = strtolower($enableCookies) === 'true';
         }
 
         $jsParams = [];
