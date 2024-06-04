@@ -4,6 +4,7 @@
       <file>tests/CoreTests.php</file>
       <file>tests/ExampleTests.php</file>
       <file>tests/JavaScriptBundlerTests.php</file>
+      <file>tests/EnableCookiesTests.php</file>
       <file>tests/FlowDataTests.php</file>
 	    <file>tests/SetHeaderTests.php</file>
     </testsuite>

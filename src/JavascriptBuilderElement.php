@@ -168,6 +168,11 @@ class JavascriptBuilderElement extends FlowElement
         $vars['_sessionId'] = $flowData->evidence->get('query.session-id');
         $vars['_sequence'] = $flowData->evidence->get('query.sequence');
 
+        $enableCookies = $flowData->evidence->get('query.fod-js-enable-cookies');
+        if ($enableCookies !== null) {
+            $vars['_enableCookies'] = strtolower($enableCookies) === 'true';
+        }
+
         $jsParams = [];
         foreach ($params as $param => $paramValue) {
             $paramKey = explode('.', $param)[1];

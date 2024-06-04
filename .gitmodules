@@ -1,0 +1,3 @@
+[submodule "javascript-templates"]
+	path = javascript-templates
+	url = https://github.com/51degrees/javascript-templates

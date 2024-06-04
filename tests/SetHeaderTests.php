@@ -31,6 +31,7 @@ use fiftyone\pipeline\core\tests\classes\TestDataDictionary;
 use fiftyone\pipeline\core\tests\classes\TestPipeline;
 use fiftyone\pipeline\core\Utils;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class SetHeaderTests extends TestCase
 {
@@ -80,11 +81,10 @@ class SetHeaderTests extends TestCase
 
     /**
      * Test response header value to be set for UACH.
-     *
+     * 
      * @dataProvider provider_testGetResponseHeaderValue
-     * @param mixed $device
-     * @param mixed $expectedValue
      */
+    #[DataProvider("provider_testGetResponseHeaderValue")]
     public function testGetResponseHeaderValue($device, $expectedValue)
     {
         $setHeaderPropertiesDict = [
@@ -142,11 +142,9 @@ class SetHeaderTests extends TestCase
 
     /**
      * Test get response header function for valid formats.
-     *
      * @dataProvider provider_testGetResponseHeaderName_Valid
-     * @param mixed $data
-     * @param mixed $expectedValue
      */
+    #[DataProvider("provider_testGetResponseHeaderName_Valid")]
     public function testGetResponseHeaderNameValid($data, $expectedValue)
     {
         $setHeaderElement = new SetHeaderElement();
@@ -166,11 +164,9 @@ class SetHeaderTests extends TestCase
 
     /**
      * Test get response header function for valid formats.
-     *
      * @dataProvider provider_testGetResponseHeaderName_InValid
-     * @param mixed $data
-     * @param mixed $expectedValue
      */
+    #[DataProvider("provider_testGetResponseHeaderName_InValid")]
     public function testGetResponseHeaderNameInValid($data, $expectedValue)
     {
         $setHeaderElement = new SetHeaderElement();
