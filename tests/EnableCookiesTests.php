@@ -31,7 +31,7 @@ use fiftyone\pipeline\core\JavascriptBuilderElement;
 use fiftyone\pipeline\core\SequenceElement;
 use fiftyone\pipeline\core\JsonBundlerElement;
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\Attributes\TestWith;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class CookieElement extends FlowElement
 {
@@ -58,13 +58,21 @@ class CookieElement extends FlowElement
 
 class EnableCookiesTests extends TestCase
 {
+    public static function provider_testJavaScriptCookies()
+    {
+        return [
+            [false, false, false],
+            [true, false, false],
+            [false, true, true],
+            [true, true, true]
+        ];
+    }
+
     /**
      * Test that the cookie settings are respected correctly.
+     * @dataProvider provider_testJavaScriptCookies
      */
-    #[TestWith([false, false, false])]
-    #[TestWith([true, false, false])]
-    #[TestWith([false, true, true])]
-    #[TestWith([true, true, true])]
+    #[DataProvider("provider_testJavaScriptCookies")]
     public function testJavaScriptCookies($enableInConfig, $enableInEvidence, $expectCookie)
     {
         $jsElement = new JavascriptBuilderElement([
@@ -84,7 +92,7 @@ class EnableCookiesTests extends TestCase
 
         $js = $flowData->javascriptbuilder->javascript;
         $matches = substr_count($js, 'document.cookie');
-        if ($expectCookie) {
+        if ($expectCookie === true) {
             $this->assertSame(2, $matches);
         }
         else {

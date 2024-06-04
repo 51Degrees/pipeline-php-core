@@ -81,6 +81,8 @@ class SetHeaderTests extends TestCase
 
     /**
      * Test response header value to be set for UACH.
+     * 
+     * @dataProvider provider_testGetResponseHeaderValue
      */
     #[DataProvider("provider_testGetResponseHeaderValue")]
     public function testGetResponseHeaderValue($device, $expectedValue)
@@ -140,6 +142,7 @@ class SetHeaderTests extends TestCase
 
     /**
      * Test get response header function for valid formats.
+     * @dataProvider provider_testGetResponseHeaderName_Valid
      */
     #[DataProvider("provider_testGetResponseHeaderName_Valid")]
     public function testGetResponseHeaderNameValid($data, $expectedValue)
@@ -161,6 +164,7 @@ class SetHeaderTests extends TestCase
 
     /**
      * Test get response header function for valid formats.
+     * @dataProvider provider_testGetResponseHeaderName_InValid
      */
     #[DataProvider("provider_testGetResponseHeaderName_InValid")]
     public function testGetResponseHeaderNameInValid($data, $expectedValue)
