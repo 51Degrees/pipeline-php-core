@@ -191,7 +191,7 @@ fiftyoneDegreesManager = function() {
         if (jsProperties !== undefined && jsProperties.length > 0) {
 
             {{^_enableCookies}}
-            let valueSetPrefix = new RegExp('document\\.cookie\\s*=\\s*(("([A-Za-z0-9_]+)\\s*=\\s*"\\s*\\+\\s*([^\\s};]+))|(`([A-Za-z0-9_]+)\\s*=\\s*\\$\\{([^}]+)\\}`))', 'g');
+            let valueSetPrefix = new RegExp('document\\.cookie\\s*=\\s*(("([A-Za-z0-9_"\\s\\+]+)\\s*=\\s*"\\s*\\+\\s*([^\\s};]+))|(`([A-Za-z0-9_]+)\\s*=\\s*\\$\\{([^}]+)\\}`))', 'g');
             let session51DataPrefix = sessionKey + "_data_";
             let sessionSetPatch = 'window.sessionStorage["' + session51DataPrefix + '$3$6"]=$4$7';
             {{/_enableCookies}}
