@@ -222,7 +222,7 @@ fiftyoneDegreesManager = function() {
                         var delay = getFromJson(name + 'delayexecution', false, true);
 
                         if ((ignoreDelayFlag || (delay === undefined || delay === false)) &&
-                            body !== undefined) {
+                            typeof body === "string" && body.length) {
                             var func = undefined;
                             var searchString = '// 51D replace this comment with callback function.';
                             completed = false;
