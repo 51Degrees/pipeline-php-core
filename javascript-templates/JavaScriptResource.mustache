@@ -82,13 +82,13 @@ fiftyoneDegreesManager = function() {
     // and return the data as key value pairs. This method is needed to extract
     // stored values for inclusion in the GET or POST request for situations
     // where CORS will prevent them from being sent to third parties.
-    var getFodSavedValues = function(){
+    var getFodSavedValues = function() {
         let fodValues = {};
         {{#_enableCookies}}
         {
             let keyValuePairs = document.cookie.split(/; */);
             for(let nextPair of keyValuePairs) {
-                let firstEqualsLocation = nextPair.indexOf('=');
+                let firstEqualsLocation = nextPair.indexOf("=");
                 let name = nextPair.substring(0, firstEqualsLocation);
                 if(startsWith(name, "51D_")){
                     let value = nextPair.substring(firstEqualsLocation+1);
@@ -115,17 +115,17 @@ fiftyoneDegreesManager = function() {
 
     // Extract key value pairs from the '51D_' prefixed values and concatenates
     // them to form a query string for the subsequent json refresh.
-    var getParametersFromStorage = function(){
+    var getParametersFromStorage = function() {
         var fodValues = getFodSavedValues();
         var keyValuePairs = [];
         for (var key in fodValues) {
             if (fodValues.hasOwnProperty(key)) {
                 // Url encode the value.
-                // This is done to ensure that invalid characters (e.g. = chars at the end of 
+                // This is done to ensure that invalid characters (e.g. = chars at the end of
                 // base 64 encoded strings) reach the server intact.
-                // The server will automatically decode the value before passing it into the 
+                // The server will automatically decode the value before passing it into the
                 // Pipeline API.
-                keyValuePairs.push(key+"="+encodeURIComponent(fodValues[key]));
+                keyValuePairs.push(key + "=" + encodeURIComponent(fodValues[key]));
             }
         }
         return keyValuePairs;
@@ -136,21 +136,21 @@ fiftyoneDegreesManager = function() {
     // returned rather than letting an exception occur.
     var getFromJson = function(key, allowObjects, allowBooleans) {
         var result = undefined;
-        if(typeof allowObjects === 'undefined') { allowObjects = false; }
-        if(typeof allowBooleans === 'undefined') { allowBooleans = false; }
+        if (typeof allowObjects === "undefined") { allowObjects = false; }
+        if (typeof allowBooleans === "undefined") { allowBooleans = false; }
 
-        if (typeof(key) === 'string') {
+        if (typeof(key) === "string") {
             var functions = json;
             var segments = key.split('.');
             var i = 0;
             while (functions !== undefined && i < segments.length) {
                 functions = functions[segments[i++]];
             }
-            if (typeof(functions) === "string") {
+            if (typeof functions === "string") {
                 result = functions;
-            } else if (allowBooleans && typeof(functions) === "boolean") {
+            } else if (allowBooleans && typeof functions === "boolean") {
                 result = functions;
-            } else if (allowObjects && typeof functions === 'object' && functions !== null) {
+            } else if (allowObjects && typeof functions === "object" && functions !== null) {
                 result = functions;
             }
         }
@@ -186,7 +186,6 @@ fiftyoneDegreesManager = function() {
         var executeCallback = true;
         var started = 0;
         var cached = 0;
-        var cachedResponse = undefined;
         var toProcess = 0;
 
         // If there is no cached response and there are JavaScript code snippets
@@ -198,80 +197,104 @@ fiftyoneDegreesManager = function() {
             let session51DataPrefix = sessionKey + "_data_";
             let sessionSetPatch = 'window.sessionStorage["' + session51DataPrefix + '$3$6"]=$4$7';
             {{/_enableCookies}}
-                            
+
             // Execute each of the JavaScript property code snippets using the
             // index of the value to access the value to avoid problems with
             // JavaScript returning erroneous values.
             for (var index = 0; index < jsProperties.length; index++) {
                 var name = jsProperties[index];
-                if (jsPropertiesStarted.indexOf(name) === -1) {
-                    var body = getFromJson(name);
+                if (jsPropertiesStarted.indexOf(name) !== -1) {
+                    continue;
+                }
+                var body = getFromJson(name);
 
-                    // If there is a body then this property should be processed.
-                    if (body) {
-                        toProcess++;
-                    }
-                    var isCached = sessionStorage && sessionStorage.getItem(sessionKey + "_property_" + name);
+                // If there is a body then this property should be processed.
+                if (body) {
+                    toProcess++;
+                }
 
-                    if (!isCached) {
-                        // Create new function bound to this instance and execute it.
-                        // This is needed to ensure the scope of the function is
-                        // associated with this instance if any members are altered or
-                        // added. Avoids global scoped variables.
+                var isCached = sessionStorage && sessionStorage.getItem(sessionKey + "_property_" + name);
 
-                        var delay = getFromJson(name + 'delayexecution', false, true);
+                // If the property has already been processed then skip it.
+                if (isCached) {
+                    cached++;
+                    continue;
+                }
 
-                        if ((ignoreDelayFlag || (delay === undefined || delay === false)) &&
-                            typeof body === "string" && body.length) {
-                            var func = undefined;
-                            var searchString = '// 51D replace this comment with callback function.';
-                            completed = false;
-                            jsPropertiesStarted.push(name);
-                            started++;
+                // Create new function bound to this instance and execute it.
+                // This is needed to ensure the scope of the function is
+                // associated with this instance if any members are altered or
+                // added. Avoids global scoped variables.
 
-                            {{^_enableCookies}}
-                            body = body.replaceAll(valueSetPrefix, sessionSetPatch);
-                            {{/_enableCookies}}
+                var delay = getFromJson(name + 'delayexecution', false, true);
 
-                            if (body.indexOf(searchString) !== -1){
-                                callbackCounter++;
-                                body = body.replace(/\/\/ 51D replace this comment with callback function./g, 'callbackFunc(resolveFunc, rejectFunc);');
-                                func = new Function('callbackFunc', 'resolveFunc', 'rejectFunc',
-                                    "try {\n" +
-                                    body + "\n" +
-                                    "} catch (err) {\n" +
-                                    "console.log(err);" +
-                                    "}"
-                                );
-                                func(completedCallback, resolve, reject);
-                                executeCallback = false;
-                            } else {
-                                func = new Function(
-                                    "try {\n" +
-                                    body + "\n" +
-                                    "} catch (err) {\n" +
-                                    "console.log(err);" +
-                                    "}"
-                                );
-                                func();
-                            }
-                            if (sessionStorage) {
-                                sessionStorage.setItem(sessionKey + "_property_" + name, true)
-                            }
-                        }
+                if (
+                    (ignoreDelayFlag || delay === undefined || delay === false) &&
+                    typeof body === "string" &&
+                    body.length
+                ) {
+                    var func = undefined;
+                    var searchString = '// 51D replace this comment with callback function.';
+                    completed = false;
+                    jsPropertiesStarted.push(name);
+                    started++;
+
+                    {{^_enableCookies}}
+                    body = body.replaceAll(valueSetPrefix, sessionSetPatch);
+                    {{/_enableCookies}}
+
+                    if (body.indexOf(searchString) !== -1){
+                        callbackCounter++;
+                        body = body.replace(/\/\/ 51D replace this comment with callback function./g, 'callbackFunc(resolveFunc, rejectFunc);');
+                        func = new Function('callbackFunc', 'resolveFunc', 'rejectFunc',
+                            "try {\n" +
+                            body + "\n" +
+                            "} catch (err) {\n" +
+                            "console.log(err);" +
+                            "}"
+                        );
+                        func(completedCallback, resolve, reject);
+                        executeCallback = false;
                     } else {
-                        cached++;
+                        func = new Function(
+                            "try {\n" +
+                            body + "\n" +
+                            "} catch (err) {\n" +
+                            "console.log(err);" +
+                            "}"
+                        );
+                        func();
+                    }
+
+                    if (sessionStorage) {
+                        sessionStorage.setItem(sessionKey + "_property_" + name, true)
+                    }
+
+                    // If the property is `javascripthardwareprofile` then check if the
+                    // profile has been set. If not then remove current property from
+                    // the list of properties that have started to prevent the
+                    // 2nd request from being made.
+                    if (name === "device.javascripthardwareprofile") {
+                        var hrw = getFodSavedValues();
+                        if (hrw && !hrw["51D_ProfileIds"]) {
+                            // find and remove name from jsPropertiesStarted
+                            var propIndex = jsPropertiesStarted.indexOf(name);
+                            if (propIndex > -1) {
+                                jsPropertiesStarted.splice(index, 1);
+                            }
+                            started--;
+                            toProcess--;
+                        }
                     }
                 }
             }
         }
-        if(cached === toProcess || started === 0)  {
-            if (sessionStorage) {
-                var cachedResponse = sessionStorage.getItem(sessionKey);
-                if (cachedResponse) {
-                    loadJSON(resolve, reject, cachedResponse);
-                    executeCallback = false;
-                }
+
+        if ((cached === toProcess || started === 0) && sessionStorage)  {
+            var cachedResponse = sessionStorage.getItem(sessionKey);
+            if (cachedResponse) {
+                loadJSON(resolve, reject, cachedResponse);
+                executeCallback = false;
             }
         }
 
@@ -280,6 +303,7 @@ fiftyoneDegreesManager = function() {
             failed = false;
             completed = true;
         }
+
         if (executeCallback) {
             callbackCounter = 1;
             completedCallback(resolve, reject);
