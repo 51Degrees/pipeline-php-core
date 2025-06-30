@@ -83,7 +83,10 @@ function getStarSign($month, $day)
     }
 }
 
+//! [class]
+//! [declaration]
 class AstrologyFlowElement extends FlowElement
+//! [declaration]
 {
     // datakey used to categorise data coming back from this
     // FlowElement in a Pipeline
@@ -150,6 +153,7 @@ class AstrologyFlowElement extends FlowElement
         return new BasicListEvidenceKeyFilter(['cookie.latitude', 'query.dateOfBirth']);
     }
 }
+//! [class]
 
 // Add some callback settings for the page to make a request with extra evidence from the client side
 // in this case the same url with an extra query string.
@@ -159,6 +163,7 @@ $javascriptBuilderSettings = [
     'endpoint' => '/?json'
 ];
 
+//! [usage]
 // Make the Pipeline and add the element we want to it
 $Pipeline = (new PipelineBuilder(['javascriptBuilderSettings' => $javascriptBuilderSettings]))
     ->add(new AstrologyFlowElement())
@@ -213,19 +218,19 @@ $output .= '<script>';
 $output .= $flowData->javascriptbuilder->javascript;
 
 $output .= 'loadHemisphere = function() {
-            fod.complete(function (data) {  
-                if(data.astrology.hemisphere) {          
+            fod.complete(function (data) {
+                if(data.astrology.hemisphere) {
                     var para = document.createElement("p");
-                    var text = document.createTextNode("Look at the " + 
+                    var text = document.createTextNode("Look at the " +
                         data.astrology.hemisphere + " hemisphere stars tonight");
                     para.appendChild(text);
 
                     var element = document.getElementById("hemispheretext");
-                    var child = element.lastElementChild;  
-                    while (child) { 
-                        element.removeChild(child); 
-                        child = element.lastElementChild; 
-                    } 
+                    var child = element.lastElementChild;
+                    while (child) {
+                        element.removeChild(child);
+                        child = element.lastElementChild;
+                    }
                     element.appendChild(para);
                 }
             })};';
@@ -234,3 +239,4 @@ $output .= '</script>';
 
 // Return the full output to the page
 echo $output;
+//! [usage]
