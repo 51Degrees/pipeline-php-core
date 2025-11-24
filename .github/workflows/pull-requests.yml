@@ -1,18 +1,16 @@
-name: Nightly Package Update
+name: Pull Requests
 
 on:
   workflow_dispatch:
     inputs:
       dryrun:
-        default: false
         type: boolean
-        description: Dry Run
-  schedule:
-    - cron: '0 1 * * *'
+        default: false
 
 jobs:
-  Nightly_Package_Update:
-    uses: 51Degrees/common-ci/.github/workflows/nightly-package-update.yml@main
+  PullRequests:
+    name: Pull Requests
+    uses: 51Degrees/common-ci/.github/workflows/nightly-pull-requests.yml@main
     with:
       repo-name: ${{ github.event.repository.name }}
       org-name: ${{ github.event.repository.owner.login }}

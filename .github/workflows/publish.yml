@@ -1,23 +1,19 @@
-name: Nightly Publish Main
+name: Publish
 
 on:
   workflow_dispatch:
     inputs:
       dryrun:
-        default: false
         type: boolean
-        description: Dry Run
-  workflow_run:
-    workflows: [Nightly PRs to Main]
-    types: [completed]
+        default: false
 
 jobs:
-  Nightly_Publish_Main:
-    uses: 51Degrees/common-ci/.github/workflows/nightly-publish-main.yml@main
+  Publish:
+    name: Publish
+    uses: 51Degrees/common-ci/.github/workflows/nightly-publish.yml@main
     with:
       repo-name: ${{ github.event.repository.name }}
       org-name: ${{ github.event.repository.owner.login }}
       dryrun: ${{ inputs.dryrun || false }}
-      build-platform: ubuntu-latest
     secrets:
       token: ${{ secrets.ACCESS_TOKEN }}
