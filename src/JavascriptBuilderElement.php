@@ -99,7 +99,12 @@ class JavascriptBuilderElement extends FlowElement
             $vars[$key] = $value;
         }
 
-        $vars['_jsonObject'] = json_encode($flowData->jsonbundler->json);
+        // Encode with JSON_INVALID_UTF8_SUBSTITUTE so a malformed byte in any
+        // property value (for example a matched User-Agent that an on-premise
+        // engine returns with invalid UTF-8) is substituted rather than making
+        // json_encode return false. A false result would be passed to string
+        // functions such as strpos() below and raise a TypeError on PHP 8.
+        $vars['_jsonObject'] = json_encode($flowData->jsonbundler->json, JSON_INVALID_UTF8_SUBSTITUTE);
 
         // Generate URL and autoUpdate params
         $protocol = $this->settings['_protocol'];
@@ -179,7 +184,9 @@ class JavascriptBuilderElement extends FlowElement
             $jsParams[$paramKey] = $paramValue;
         }
 
-        $vars['_parameters'] = json_encode($jsParams);
+        // Substitute invalid UTF-8 rather than returning false (see the
+        // _jsonObject encode above) so downstream string handling is safe.
+        $vars['_parameters'] = json_encode($jsParams, JSON_INVALID_UTF8_SUBSTITUTE);
 
         $output = (new \Mustache_Engine())->render(
             file_get_contents(__DIR__ . '/../javascript-templates/JavaScriptResource.mustache'),
