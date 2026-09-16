@@ -230,7 +230,13 @@ class JavaScriptBuilderObjectNameTests extends TestCase
             'empty' => ['', false],
             // A reserved word is also an ordinary word in the script's
             // comments, so only the places the name is written are checked.
-            'reserved word' => ['class', false]
+            'reserved word' => ['class', false],
+            // These are also ordinary words in the script, as values or as
+            // the constructor's own name.
+            'Infinity' => ['Infinity', false],
+            'NaN' => ['NaN', false],
+            'undefined' => ['undefined', false],
+            'constructor name' => ['fiftyoneDegreesManager', false]
         ];
     }
 
@@ -309,7 +315,12 @@ class JavaScriptBuilderObjectNameTests extends TestCase
             'quote' => ['x"y'],
             'empty' => [''],
             'reserved word' => ['var'],
+            'Infinity' => ['Infinity'],
+            'NaN' => ['NaN'],
+            'undefined' => ['undefined'],
+            'constructor name' => ['fiftyoneDegreesManager'],
             'trailing new line' => ["fod\n"],
+            'not ASCII' => ["caf\u{e9}"],
             'not a string' => [5]
         ];
     }
@@ -331,7 +342,8 @@ class JavaScriptBuilderObjectNameTests extends TestCase
         return [
             'plain' => ['myFod'],
             'underscore' => ['_fod'],
-            'dollar' => ['$fod9']
+            'dollar' => ['$fod9'],
+            'contains a reserved word' => ['classy']
         ];
     }
 

@@ -53,8 +53,11 @@ class JavascriptBuilderElement extends FlowElement
     private const EXCLUDED_PARAMETERS = ['query.session-id', 'query.sequence'];
 
     /**
-     * Words that cannot be used as a variable name, including those reserved
-     * only in strict mode code and the literals null, true and false.
+     * Names the object cannot have. These are the reserved words of the
+     * language, including those reserved only in strict mode and the literals
+     * null, true and false, plus the three global values a top level var
+     * cannot replace, so the object would silently never be created, and the
+     * name of the constructor the script itself defines.
      */
     private const RESERVED_WORDS = [
         'await', 'break', 'case', 'catch', 'class', 'const', 'continue',
@@ -63,7 +66,8 @@ class JavascriptBuilderElement extends FlowElement
         'import', 'in', 'instanceof', 'interface', 'let', 'new', 'null',
         'package', 'private', 'protected', 'public', 'return', 'static',
         'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var',
-        'void', 'while', 'with', 'yield'
+        'void', 'while', 'with', 'yield',
+        'Infinity', 'NaN', 'undefined', 'fiftyoneDegreesManager'
     ];
 
     /**
