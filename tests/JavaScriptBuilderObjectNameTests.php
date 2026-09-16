@@ -356,4 +356,24 @@ class JavaScriptBuilderObjectNameTests extends TestCase
         $element = new JavascriptBuilderElement(['objName' => $name]);
         $this->assertSame($name, $element->settings['_objName']);
     }
+
+    public static function provider_notConfigured(): array
+    {
+        return [
+            'absent' => [[]],
+            'null' => [['objName' => null]]
+        ];
+    }
+
+    /**
+     * A name that is not configured at all, absent or null, means fod. Only
+     * a configured name, the empty string included, is checked.
+     * @dataProvider provider_notConfigured
+     */
+    #[DataProvider('provider_notConfigured')]
+    public function testNameNotConfiguredIsFod(array $settings): void
+    {
+        $element = new JavascriptBuilderElement($settings);
+        $this->assertSame('fod', $element->settings['_objName']);
+    }
 }

@@ -79,11 +79,11 @@ class JavascriptBuilderElement extends FlowElement
 
     /**
      * @param array<string, mixed> $settings 'objName' is the name of the
-     * client side object ('fod' by default). The page request can ask for a
-     * different name with the 'query.fod-js-object-name' evidence. A name
-     * must be a JavaScript identifier (ASCII letters, digits, '_' and '$',
-     * not starting with a digit) and not a reserved word. An invalid
-     * 'objName' throws an \InvalidArgumentException, and an invalid
+     * client side object, 'fod' when absent or null. The page request can
+     * ask for a different name with the 'query.fod-js-object-name' evidence.
+     * A name must be a JavaScript identifier (ASCII letters, digits, '_' and
+     * '$', not starting with a digit) and not a reserved word. An invalid
+     * 'objName', the empty string included, throws an \InvalidArgumentException, and an invalid
      * requested name is ignored with a warning logged.
      */
     public function __construct(array $settings = [])
