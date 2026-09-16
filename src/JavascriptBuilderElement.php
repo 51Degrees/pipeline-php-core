@@ -53,6 +53,20 @@ class JavascriptBuilderElement extends FlowElement
     private const EXCLUDED_PARAMETERS = ['query.session-id', 'query.sequence'];
 
     /**
+     * Words that cannot be used as a variable name, including those reserved
+     * only in strict mode code and the literals null, true and false.
+     */
+    private const RESERVED_WORDS = [
+        'await', 'break', 'case', 'catch', 'class', 'const', 'continue',
+        'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export',
+        'extends', 'false', 'finally', 'for', 'function', 'if', 'implements',
+        'import', 'in', 'instanceof', 'interface', 'let', 'new', 'null',
+        'package', 'private', 'protected', 'public', 'return', 'static',
+        'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var',
+        'void', 'while', 'with', 'yield'
+    ];
+
+    /**
      * @var array<string, mixed>
      */
     public array $settings;
@@ -60,12 +74,27 @@ class JavascriptBuilderElement extends FlowElement
     public string $dataKey = 'javascriptbuilder';
 
     /**
-     * @param array<string, mixed> $settings
+     * @param array<string, mixed> $settings 'objName' is the name of the
+     * client side object ('fod' by default). The page request can ask for a
+     * different name with the 'query.fod-js-object-name' evidence. A name
+     * must be a JavaScript identifier (ASCII letters, digits, '_' and '$',
+     * not starting with a digit) and not a reserved word. An invalid
+     * 'objName' throws an \InvalidArgumentException, and an invalid
+     * requested name is ignored with a warning logged.
      */
     public function __construct(array $settings = [])
     {
+        $objName = $settings['objName'] ?? 'fod';
+        if (!self::isValidObjectName($objName)) {
+            throw new \InvalidArgumentException(
+                "The JavaScript builder's objName setting must be a " .
+                "JavaScript identifier (ASCII letters, digits, '_' and '$', " .
+                'not starting with a digit) and not a reserved word.'
+            );
+        }
+
         $this->settings = [
-            '_objName' => $settings['objName'] ?? 'fod',
+            '_objName' => $objName,
             '_protocol' => $settings['protocol'] ?? null,
             '_host' => $settings['host'] ?? null,
             '_endpoint' => $settings['endpoint'] ?? '',
@@ -75,6 +104,22 @@ class JavascriptBuilderElement extends FlowElement
         $this->minify = $settings['minify'] ?? true;
 
         parent::__construct();
+    }
+
+    /**
+     * Whether a name can be used as the client side object's name. The name
+     * is written into the script as a variable name, a session storage key
+     * and a property name, all without any escaping, so a name that is not
+     * a plain JavaScript identifier would break the script or change what it
+     * does.
+     *
+     * @param mixed $name
+     */
+    public static function isValidObjectName($name): bool
+    {
+        return is_string($name) &&
+            preg_match('/^[A-Za-z_$][A-Za-z0-9_$]*$/D', $name) === 1 &&
+            !in_array($name, self::RESERVED_WORDS, true);
     }
 
     /**
@@ -183,6 +228,26 @@ class JavascriptBuilderElement extends FlowElement
         $enableCookies = $flowData->evidence->get('query.fod-js-enable-cookies');
         if ($enableCookies !== null) {
             $vars['_enableCookies'] = strtolower($enableCookies) === 'true';
+        }
+
+        // The page request can ask for a different object name. A name that
+        // is not a valid identifier is ignored, and the configured name is
+        // used, because it would be written into the script as given. The
+        // requested text is left out of the warning so that it cannot reach
+        // the log either.
+        $requestedName = $flowData->evidence->get(Constants::EVIDENCE_OBJECT_NAME);
+        if ($requestedName !== null) {
+            if (self::isValidObjectName($requestedName)) {
+                $vars['_objName'] = $requestedName;
+            } else {
+                $flowData->pipeline->log(
+                    'warning',
+                    'The requested JavaScript object name (' .
+                    Constants::EVIDENCE_OBJECT_NAME . ') is not a valid ' .
+                    "JavaScript identifier, so the configured name '" .
+                    $this->settings['_objName'] . "' is used."
+                );
+            }
         }
 
         // Left out after the URL above is built, because the record of a
