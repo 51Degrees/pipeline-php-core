@@ -164,17 +164,11 @@ class JavascriptBuilderElement extends FlowElement
         }
 
         // Use results from device detection if available to determine
-        // if the browser supports promises.
-        if (property_exists($flowData, 'device') && property_exists($flowData->device, 'promise')) {
-            $vars['_supportsPromises'] = $flowData->device->promise->value == true;
-        } else {
-            $vars['_supportsPromises'] = false;
-        }
-
-        // Use results from device detection if available to determine
-        // if the browser supports fetch, as the .NET builder does. Without
-        // them the script uses XMLHttpRequest.
-        $vars['_supportsFetch'] = $this->supportsFetch($flowData);
+        // if the browser fully supports promises and supports fetch, as the
+        // .NET builder does. Without them the script creates no promise and
+        // uses XMLHttpRequest.
+        $vars['_supportsPromises'] = $this->deviceValueIs($flowData, 'promise', 'Full');
+        $vars['_supportsFetch'] = $this->deviceValueIs($flowData, 'fetch', true);
 
         // Check if any delayedproperties exist in the json
         $vars['_hasDelayedProperties'] = strpos($vars['_jsonObject'], 'delayexecution') !== false;
@@ -251,16 +245,19 @@ class JavascriptBuilderElement extends FlowElement
     }
 
     /**
-     * True where device detection says the browser supports fetch. False
-     * where there is no device data or no fetch property.
+     * True where the device property has exactly the value given. False
+     * where there is no device data, no such property or no value.
+     *
+     * @param mixed $expected
      */
-    private function supportsFetch(FlowData $flowData): bool
+    private function deviceValueIs(FlowData $flowData, string $property, $expected): bool
     {
         try {
-            $fetch = $flowData->get('device')->get('fetch');
-            return $fetch instanceof AspectPropertyValue &&
-                $fetch->hasValue &&
-                $fetch->value === true;
+            $value = $flowData->get('device')->get($property);
+
+            return $value instanceof AspectPropertyValue &&
+                $value->hasValue &&
+                $value->value === $expected;
         } catch (\Throwable $e) {
             return false;
         }

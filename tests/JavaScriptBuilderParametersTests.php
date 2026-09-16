@@ -30,30 +30,29 @@ use fiftyone\pipeline\core\PipelineBuilder;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Stands in for device detection, offering only the 'fetch' property.
+ * Stands in for device detection, offering only the one property given.
  */
-class FetchDeviceElement extends FlowElement
+class ScriptDeviceElement extends FlowElement
 {
     public string $dataKey = 'device';
 
-    public array $properties = [
-        'fetch' => [
-            'type' => 'bool'
-        ]
-    ];
+    public array $properties = [];
 
-    private $fetch;
+    private $name;
+    private $value;
 
-    public function __construct($fetch)
+    public function __construct(string $name, $value)
     {
-        $this->fetch = $fetch;
+        $this->name = $name;
+        $this->value = $value;
+        $this->properties = [$name => ['type' => 'string']];
         parent::__construct();
     }
 
     public function processInternal($flowData): void
     {
         $flowData->setElementData(new ElementDataDictionary($this, [
-            'fetch' => new AspectPropertyValue(null, $this->fetch)
+            $this->name => new AspectPropertyValue(null, $this->value)
         ]));
     }
 }
@@ -62,8 +61,8 @@ class FetchDeviceElement extends FlowElement
  * Every builder is expected to render the same script from the same
  * evidence, and the .NET builder is the reference. These tests pin the
  * places where this builder used to differ from it, being which evidence
- * becomes a parameter, how a parameter is written, the callback URL and the
- * choice between fetch and XMLHttpRequest.
+ * becomes a parameter, how a parameter is written, the callback URL, the
+ * choice between fetch and XMLHttpRequest and whether a promise is created.
  */
 class JavaScriptBuilderParametersTests extends TestCase
 {
@@ -165,7 +164,7 @@ class JavaScriptBuilderParametersTests extends TestCase
         $script = $this->render(
             ['header.host' => 'example.com'],
             '/json',
-            new FetchDeviceElement(true)
+            new ScriptDeviceElement('fetch', true)
         );
 
         $this->assertStringContainsString(
@@ -181,7 +180,7 @@ class JavaScriptBuilderParametersTests extends TestCase
         $unsupported = $this->render(
             ['header.host' => 'example.com'],
             '/json',
-            new FetchDeviceElement(false)
+            new ScriptDeviceElement('fetch', false)
         );
 
         foreach ([$without, $unsupported] as $script) {
@@ -190,6 +189,49 @@ class JavaScriptBuilderParametersTests extends TestCase
                 $script
             );
             $this->assertStringNotContainsString("fetch('", $script);
+        }
+    }
+
+    /**
+     * The script creates a promise only where device detection says the
+     * browser fully supports them, which the .NET builder reads as the
+     * 'promise' property being 'Full'.
+     */
+    public function testPromiseIsCreatedWhereTheDeviceFullySupportsThem()
+    {
+        $script = $this->render(
+            ['header.host' => 'example.com'],
+            '/json',
+            new ScriptDeviceElement('promise', 'Full')
+        );
+
+        $this->assertStringContainsString(
+            'this.promise = new Promise(',
+            $script
+        );
+    }
+
+    public function testNoPromiseWhereTheDeviceDoesNotFullySupportThem()
+    {
+        $scripts = [
+            $this->render(['header.host' => 'example.com']),
+            $this->render(
+                ['header.host' => 'example.com'],
+                '/json',
+                new ScriptDeviceElement('promise', 'None')
+            ),
+            $this->render(
+                ['header.host' => 'example.com'],
+                '/json',
+                new ScriptDeviceElement('promise', 'Polyfill')
+            )
+        ];
+
+        foreach ($scripts as $script) {
+            $this->assertStringNotContainsString(
+                'this.promise = new Promise(',
+                $script
+            );
         }
     }
 
