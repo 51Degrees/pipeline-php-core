@@ -226,6 +226,39 @@ class JavaScriptBundlerTests extends TestCase
         $this->assertCount(0, $flowData->jsonbundler->json['javascriptProperties']);
     }
 
+    /**
+     * The rendered script is not configured with the session id or the
+     * sequence. A session id is different on every page view, so one named in
+     * the parameters would put a value in the record of a request's inputs
+     * that can never match, the cached response would be thrown away and the
+     * snippets would run again on every page.
+     */
+    public function testParametersExcludeSessionIdAndSequence()
+    {
+        $flowData = (new TestPipeline(false))->pipeline->createFlowData();
+        $flowData->evidence->set('query.session-id', 'test-session');
+        $flowData->evidence->set('query.sequence', 1);
+        $flowData->evidence->set('query.mark', 'kept');
+
+        $flowData->process();
+
+        // The session id is legitimately rendered on its own, as _sessionId,
+        // so only the parameters line is read.
+        $parameters = array_values(array_filter(
+            explode("\n", $flowData->javascriptbuilder->javascript),
+            function ($line) {
+                return strpos($line, 'var renderedParameters') !== false;
+            }
+        ));
+
+        $this->assertCount(1, $parameters);
+        $this->assertStringNotContainsString('session-id', $parameters[0]);
+        $this->assertStringNotContainsString('sequence', $parameters[0]);
+        // Every other query value is still there, or this would pass with no
+        // parameters at all.
+        $this->assertStringContainsString('kept', $parameters[0]);
+    }
+
     public function testJsonbundlerWhenDelayedExecutionFalse()
     {
         $pipeline = (new PipelineBuilder())

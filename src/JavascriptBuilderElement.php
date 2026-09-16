@@ -41,6 +41,18 @@ use JShrink\Minifier;
 class JavascriptBuilderElement extends FlowElement
 {
     /**
+     * Evidence keys the rendered script is not configured with. The script
+     * appends both to its own request itself, so naming them here as well
+     * would put the session id into the record the script keeps of a
+     * request's inputs. That record decides whether a later page view in the
+     * same tab can be served from the cached response, and a session id
+     * changes on every page view, so a record holding one could never match.
+     * The .NET builder, the reference for this behaviour, excludes the same
+     * two.
+     */
+    private const EXCLUDED_PARAMETERS = ['query.session-id', 'query.sequence'];
+
+    /**
      * @var array<string, mixed>
      */
     public array $settings;
@@ -173,8 +185,16 @@ class JavascriptBuilderElement extends FlowElement
             $vars['_enableCookies'] = strtolower($enableCookies) === 'true';
         }
 
+        // Left out after the URL above is built, because the record of a
+        // request's inputs is taken from these parameters and a session id
+        // that differs on every page view would stop it ever matching, so the
+        // cached response would be thrown away and the snippets would run
+        // again on every page.
         $jsParams = [];
         foreach ($params as $param => $paramValue) {
+            if (in_array($param, self::EXCLUDED_PARAMETERS, true)) {
+                continue;
+            }
             $paramKey = explode('.', $param)[1];
             $jsParams[$paramKey] = $paramValue;
         }
