@@ -54,9 +54,14 @@ class JavascriptBuilderElement extends FlowElement
 
     /**
      * The sequence the script is rendered with when the evidence holds no
-     * usable value, which is what the .NET builder uses.
+     * usable value.
      */
     private const DEFAULT_SEQUENCE = 1;
+
+    /**
+     * The largest sequence, which is the largest 32 bit signed integer.
+     */
+    public const MAX_SEQUENCE = 2147483647;
 
     /**
      * @var array<string, mixed>
@@ -84,38 +89,65 @@ class JavascriptBuilderElement extends FlowElement
     }
 
     /**
+     * A sequence as a positive 32 bit integer, or null when the value cannot
+     * be used as one.
+     *
+     * @param mixed $value The query.sequence evidence, or null
+     */
+    public static function parseSequence($value): ?int
+    {
+        if (is_int($value)) {
+            return $value >= 1 && $value <= self::MAX_SEQUENCE ? $value : null;
+        }
+
+        if (!is_string($value) || preg_match('/^\s*\+?[0-9]+\s*$/D', $value) !== 1) {
+            return null;
+        }
+
+        // The range is checked on the digits, because casting a number that
+        // is too large gives the largest integer rather than failing. Every
+        // leading zero is dropped first, so no digits left means zero, which
+        // is not a sequence.
+        $digits = ltrim(ltrim(trim($value, " \t\n\r\v\f"), '+'), '0');
+        if ($digits === '' || strlen($digits) > 10 ||
+            (strlen($digits) === 10 && strcmp($digits, '2147483647') > 0)) {
+            return null;
+        }
+
+        return (int) $digits;
+    }
+
+    /**
      * The sequence to render into the script.
      *
      * The template writes the sequence as bare code (var sequence = ...;), so
      * anything other than a whole number would stop the script parsing, or
      * change what it does. A pipeline without a SequenceElement passes the
-     * query string's value, or nothing at all, straight through. As the .NET
-     * builder does, a value that is not a 32 bit whole number becomes 1.
+     * query string's value, or nothing at all, straight through. As the
+     * pipeline specification says, a value that is not a positive 32 bit
+     * integer becomes 1.
      *
      * @param mixed $value The query.sequence evidence, or null
      */
     public static function getSequence($value): int
     {
-        if (is_int($value)) {
-            return $value >= -2147483648 && $value <= 2147483647
-                ? $value : self::DEFAULT_SEQUENCE;
-        }
+        return self::parseSequence($value) ?? self::DEFAULT_SEQUENCE;
+    }
 
-        if (!is_string($value) || preg_match('/^\s*[+-]?[0-9]+\s*$/D', $value) !== 1) {
-            return self::DEFAULT_SEQUENCE;
-        }
-
-        // The range is checked on the digits, because casting a number that
-        // is too large gives the largest integer rather than failing.
-        $text = trim($value, " \t\n\r\v\f");
-        $digits = ltrim(ltrim($text, '+-'), '0');
-        $limit = $text[0] === '-' ? '2147483648' : '2147483647';
-        if (strlen($digits) > strlen($limit) ||
-            (strlen($digits) === strlen($limit) && strcmp($digits, $limit) > 0)) {
-            return self::DEFAULT_SEQUENCE;
-        }
-
-        return (int) $text;
+    /**
+     * The session id to render into the script.
+     *
+     * The template writes the session id inside quotes without any escaping.
+     * As the pipeline specification says, a session id that is not 1 to 64
+     * ASCII letters, digits and hyphens is rendered as an empty string,
+     * whether it came from the SequenceElement or from the query string.
+     *
+     * @param mixed $value The query.session-id evidence, or null
+     */
+    public static function getSessionId($value): string
+    {
+        return is_string($value) && preg_match('/^[A-Za-z0-9-]{1,64}$/D', $value) === 1
+            ? $value : '';
     }
 
     /**
@@ -218,10 +250,11 @@ class JavascriptBuilderElement extends FlowElement
 
         // Check if any delayedproperties exist in the json
         $vars['_hasDelayedProperties'] = strpos($vars['_jsonObject'], 'delayexecution') !== false;
-        // Both are written into the script, so each always has a value. The
-        // session id is written inside quotes and is empty when absent, and
-        // the sequence is written as bare code, so it is always a number.
-        $vars['_sessionId'] = (string) ($flowData->evidence->get('query.session-id') ?? '');
+        // Both are written into the script, so each always has a safe value.
+        // The session id is written inside quotes and is empty when absent or
+        // not safe, and the sequence is written as bare code, so it is always
+        // a positive number.
+        $vars['_sessionId'] = self::getSessionId($flowData->evidence->get('query.session-id'));
         $vars['_sequence'] = self::getSequence($flowData->evidence->get('query.sequence'));
 
         $enableCookies = $flowData->evidence->get('query.fod-js-enable-cookies');

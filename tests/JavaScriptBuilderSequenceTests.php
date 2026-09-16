@@ -132,20 +132,22 @@ class JavaScriptBuilderSequenceTests extends TestCase
     {
         return [
             'text' => ['abc'],
-            'statement' => ['1;b'],
+            'negative' => ['-1'],
+            'zero' => ['0'],
+            'too large' => ['99999999999'],
             'empty' => [''],
+            'statement' => ['1;b'],
             'decimal' => ['1.5'],
             'hexadecimal' => ['0x10'],
-            'too large' => ['2147483648'],
-            'too small' => ['-2147483649'],
+            'just too large' => ['2147483648'],
             'far too large' => ['99999999999999999999']
         ];
     }
 
     /**
-     * A query.sequence the builder cannot use as a whole number is rendered
-     * as 1, which is what the .NET builder does, so the script parses and
-     * nothing else is written in its place.
+     * A query.sequence that is not a positive 32 bit integer is rendered as
+     * 1, as the pipeline specification says, so the script parses and nothing
+     * else is written in its place.
      * @dataProvider provider_unusableSequence
      */
     #[DataProvider('provider_unusableSequence')]
@@ -160,16 +162,48 @@ class JavaScriptBuilderSequenceTests extends TestCase
         $this->assertParses($script);
     }
 
+    public static function provider_unusableSequenceWithElement(): array
+    {
+        return [
+            'text' => ['abc'],
+            'negative' => ['-1'],
+            'zero' => ['0'],
+            'too large' => ['99999999999'],
+            'empty' => [''],
+            'largest' => ['2147483647']
+        ];
+    }
+
+    /**
+     * With the SequenceElement the value that reaches the script is the one
+     * the element works out. A query.sequence that is not a positive 32 bit
+     * integer is treated as no sequence, so the request is sequence 1 rather
+     * than carrying a number the script cannot use. The largest sequence has
+     * no next value, so the builder renders 1 for it as well.
+     * @dataProvider provider_unusableSequenceWithElement
+     */
+    #[DataProvider('provider_unusableSequenceWithElement')]
+    public function testUnusableSequenceWithSequenceElementBecomesOne(string $value): void
+    {
+        $script = self::render(
+            ['query.session-id' => 'abc', 'query.sequence' => $value],
+            false,
+            true
+        );
+
+        $this->assertSame(['var sequence = 1;'], self::lines($script, 'sequence'));
+        $this->assertSame(['var sessionId = "abc";'], self::lines($script, 'sessionId'));
+        $this->assertParses($script);
+    }
+
     public static function provider_usableSequence(): array
     {
         return [
             'text' => ['7', 7],
             'spaces' => [' 7 ', 7],
-            'negative' => ['-2', -2],
             'plus' => ['+3', 3],
             'leading zeros' => ['007', 7],
             'largest' => ['2147483647', 2147483647],
-            'smallest' => ['-2147483648', -2147483648],
             'number' => [12, 12]
         ];
     }
@@ -192,11 +226,96 @@ class JavaScriptBuilderSequenceTests extends TestCase
         $this->assertParses($script);
     }
 
-    public function testSessionIdFromQueryIsRendered(): void
+    public static function provider_sequenceElement(): array
     {
-        $script = self::render(['query.session-id' => 'abc-123']);
+        return ['without sequence element' => [false], 'with sequence element' => [true]];
+    }
+
+    /**
+     * @dataProvider provider_sequenceElement
+     */
+    #[DataProvider('provider_sequenceElement')]
+    public function testSessionIdFromQueryIsRendered(bool $sequenceElement): void
+    {
+        $script = self::render(['query.session-id' => 'abc-123'], false, $sequenceElement);
 
         $this->assertSame(['var sessionId = "abc-123";'], self::lines($script, 'sessionId'));
+        $this->assertParses($script);
+    }
+
+    public function testLongestSessionIdIsRendered(): void
+    {
+        $sessionId = str_repeat('a', 64);
+        $script = self::render(['query.session-id' => $sessionId]);
+
+        $this->assertSame(
+            ['var sessionId = "' . $sessionId . '";'],
+            self::lines($script, 'sessionId')
+        );
+        $this->assertParses($script);
+    }
+
+    public static function provider_unsafeSessionId(): array
+    {
+        $values = [
+            'quote' => ['a"b', true],
+            'backslash' => ['a\\b', true],
+            'end of script' => ['</script>', true],
+            'too long' => [str_repeat('a', 65), true],
+            'not ASCII' => ["caf\u{e9}", true],
+            // The template's own text holds "a b" and "ab", so for these two
+            // only the rendered session id is read.
+            'space' => ['a b', false],
+            'new line' => ["ab\n", false]
+        ];
+        $cases = [];
+        foreach ($values as $name => $value) {
+            foreach ([false, true] as $element) {
+                $suffix = $element ? ' with sequence element' : ' without sequence element';
+                $cases[$name . $suffix] = [$value[0], $value[1], $element];
+            }
+        }
+
+        return $cases;
+    }
+
+    /**
+     * The session id is written inside quotes without any escaping, so one
+     * that is not 1 to 64 ASCII letters, digits and hyphens is rendered as an
+     * empty string, as the pipeline specification says. The SequenceElement
+     * keeps a session id it is given, so the check is the builder's in both
+     * pipelines.
+     * @dataProvider provider_unsafeSessionId
+     */
+    #[DataProvider('provider_unsafeSessionId')]
+    public function testUnsafeSessionIdIsRenderedEmpty(
+        string $value,
+        bool $checkText,
+        bool $sequenceElement
+    ): void {
+        $script = self::render(['query.session-id' => $value], false, $sequenceElement);
+
+        $this->assertSame(['var sessionId = "";'], self::lines($script, 'sessionId'));
+        if ($checkText) {
+            $this->assertStringNotContainsString($value, $script);
+        }
+        $this->assertParses($script);
+    }
+
+    /**
+     * The SequenceElement creates a session id on the first request, and that
+     * id is safe to render.
+     */
+    public function testGeneratedSessionIdIsRendered(): void
+    {
+        $script = self::render([], false, true);
+
+        $lines = self::lines($script, 'sessionId');
+        $this->assertCount(1, $lines);
+        $this->assertMatchesRegularExpression(
+            '/^var sessionId = "[A-Za-z0-9-]{1,64}";$/',
+            $lines[0]
+        );
         $this->assertParses($script);
     }
 
@@ -226,9 +345,13 @@ class JavaScriptBuilderSequenceTests extends TestCase
             'true' => [true, 1],
             'float' => [2.0, 1],
             'int too large' => [2147483648, 1],
-            'int too small' => [-2147483649, 1],
-            'zero' => ['0', 0],
-            'minus zero' => ['-0', 0]
+            'int zero' => [0, 1],
+            'int negative' => [-1, 1],
+            'int smallest' => [1, 1],
+            'int largest' => [2147483647, 2147483647],
+            'zero' => ['0', 1],
+            'minus zero' => ['-0', 1],
+            'negative' => ['-3', 1]
         ];
     }
 
@@ -239,5 +362,26 @@ class JavaScriptBuilderSequenceTests extends TestCase
     public function testGetSequence($value, int $expected): void
     {
         $this->assertSame($expected, JavascriptBuilderElement::getSequence($value));
+    }
+
+    public static function provider_getSessionId(): array
+    {
+        return [
+            'plain' => ['abc-123', 'abc-123'],
+            'null' => [null, ''],
+            'empty' => ['', ''],
+            'number' => [5, ''],
+            'too long' => [str_repeat('a', 65), ''],
+            'quote' => ['a"b', '']
+        ];
+    }
+
+    /**
+     * @dataProvider provider_getSessionId
+     */
+    #[DataProvider('provider_getSessionId')]
+    public function testGetSessionId($value, string $expected): void
+    {
+        $this->assertSame($expected, JavascriptBuilderElement::getSessionId($value));
     }
 }
