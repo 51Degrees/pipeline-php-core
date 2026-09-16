@@ -259,6 +259,28 @@ class JavaScriptBundlerTests extends TestCase
         $this->assertStringContainsString('kept', $parameters[0]);
     }
 
+    /**
+     * The template copy leaves the session id and the sequence out of the
+     * record of a request's inputs whatever the parameters carried, as
+     * javascript-templates does from commit ede377cc. A copy older than that
+     * keeps both in the record whenever a builder renders them into the
+     * parameters, so a later page view in the same tab could never be served
+     * from the cached response.
+     */
+    public function testRecordLeavesOutSessionIdAndSequence()
+    {
+        $pipeline = (new PipelineBuilder([
+            'javascriptBuilderSettings' => ['minify' => false]
+        ]))->build();
+        $flowData = $pipeline->createFlowData();
+        $flowData->process();
+
+        $this->assertStringContainsString(
+            'var recordExcluded = { "session-id": 1, "sequence": 1 };',
+            $flowData->javascriptbuilder->javascript
+        );
+    }
+
     public function testJsonbundlerWhenDelayedExecutionFalse()
     {
         $pipeline = (new PipelineBuilder())
