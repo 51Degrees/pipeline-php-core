@@ -107,9 +107,7 @@ class Evidence
         }
 
         if ($query === null) {
-            // Merge the GET and POST parameters favoring the GET keys if there
-            // are keys that conflict.
-            $query = array_merge($_POST, $_GET);
+            $query = static::queryFromRequest($server);
         }
 
         $evidence = [];
@@ -157,6 +155,125 @@ class Evidence
         $evidence['header.protocol'] = $protocol;
 
         $this->setArray($evidence);
+    }
+
+    /**
+     * The form parameters of the current request, with the names as the
+     * browser sent them.
+     *
+     * PHP replaces a dot or a space in a parameter name with an underscore
+     * when it fills $_GET and $_POST, so a request carrying 'id.usage'
+     * arrives as 'id_usage' and the cloud service, which reads 'id.usage',
+     * never sees it. The raw query string and, for a form encoded body, the
+     * raw body are read again here so those names survive. A name PHP left
+     * alone is taken from $_GET and $_POST as before, and where a name was
+     * changed the changed one is dropped in favour of the name that was
+     * sent.
+     *
+     * A name written in the array form, such as 'a[b]', is left to PHP,
+     * which builds an array from it. A multipart body cannot be read a
+     * second time, so a dotted name sent in one keeps the underscore PHP
+     * gave it.
+     *
+     * @param array<string, string> $server Key-value pairs for the HTTP headers
+     * @return array<string, int|string>
+     */
+    protected static function queryFromRequest(array $server): array
+    {
+        // Merge the GET and POST parameters favoring the GET keys if there
+        // are keys that conflict.
+        $query = array_merge($_POST, $_GET);
+
+        $sent = [];
+        if (static::isFormEncodedPost($server)) {
+            $sent = static::parseFormEncoded(static::rawBody());
+        }
+
+        // The query string is applied last for the same reason the GET
+        // parameters win above.
+        foreach (static::parseFormEncoded((string) ($server['QUERY_STRING'] ?? '')) as $name => $value) {
+            $sent[$name] = $value;
+        }
+
+        foreach ($sent as $name => $value) {
+            $asPhpGivesIt = static::asPhpGivesIt($name);
+            if ($asPhpGivesIt === $name) {
+                continue;
+            }
+            unset($query[$asPhpGivesIt]);
+            $query[$name] = $value;
+        }
+
+        return $query;
+    }
+
+    /**
+     * Whether the request carries a form encoded body, which is the only
+     * body that can be read again as name and value pairs.
+     *
+     * @param array<string, string> $server Key-value pairs for the HTTP headers
+     */
+    protected static function isFormEncodedPost(array $server): bool
+    {
+        if (strtoupper((string) ($server['REQUEST_METHOD'] ?? '')) !== 'POST') {
+            return false;
+        }
+
+        $type = strtolower((string) ($server['CONTENT_TYPE'] ?? ''));
+
+        return strpos($type, 'application/x-www-form-urlencoded') === 0;
+    }
+
+    /**
+     * The body of the request exactly as it arrived. Overridden in tests,
+     * because php://input cannot be written to.
+     */
+    protected static function rawBody(): string
+    {
+        $body = file_get_contents('php://input');
+
+        return $body === false ? '' : $body;
+    }
+
+    /**
+     * Reads form encoded text into name and value pairs, decoding both and
+     * keeping every name exactly as it was sent. A repeated name takes the
+     * last value, as PHP does. A name in the array form is skipped, because
+     * PHP builds an array for it and this is not trying to replace that.
+     *
+     * @return array<string, string>
+     */
+    protected static function parseFormEncoded(string $raw): array
+    {
+        $values = [];
+
+        foreach (explode('&', $raw) as $pair) {
+            if ($pair === '') {
+                continue;
+            }
+
+            $split = strpos($pair, '=');
+            $name = urldecode($split === false ? $pair : substr($pair, 0, $split));
+
+            if ($name === '' || strpos($name, '[') !== false) {
+                continue;
+            }
+
+            $values[$name] = $split === false
+                ? ''
+                : urldecode(substr($pair, $split + 1));
+        }
+
+        return $values;
+    }
+
+    /**
+     * The name PHP gives a parameter in $_GET and $_POST, which is the name
+     * that was sent with each dot and space replaced by an underscore.
+     */
+    protected static function asPhpGivesIt(string $name): string
+    {
+        return str_replace(['.', ' '], '_', $name);
     }
 
     /**
