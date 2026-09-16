@@ -138,29 +138,25 @@ class JavascriptBuilderElement extends FlowElement
         $vars['_host'] = $host;
         $vars['_protocol'] = $protocol;
 
-        $params = $this->getEvidenceKeyFilter()->filterEvidence($flowData->evidence->getAll());
+        $endpoint = $vars['_endpoint'];
 
-        if ($vars['_host'] && $vars['_protocol'] && $vars['_endpoint']) {
-            $vars['_url'] = $vars['_protocol'] . '://' . $vars['_host'] . $vars['_endpoint'];
-
-            // Add query parameters to the URL
-            $query = [];
-
-            foreach ($params as $param => $paramValue) {
-                $paramKey = explode('.', $param)[1];
-                $query[$paramKey] = $paramValue;
+        if ($vars['_host'] && $vars['_protocol'] && $endpoint) {
+            // One slash between the host and the endpoint, as the .NET
+            // builder does.
+            $endpointHasSlash = $endpoint[0] === '/';
+            $hostHasSlash = substr($vars['_host'], -1) === '/';
+            if (!$endpointHasSlash && !$hostHasSlash) {
+                $endpoint = '/' . $endpoint;
+            } elseif ($endpointHasSlash && $hostHasSlash) {
+                $endpoint = substr($endpoint, 1);
             }
 
-            $urlQuery = http_build_query($query);
-
-            // Does the URL already have a query string in it?
-            if (strpos($vars['_url'], '?') === false) {
-                $vars['_url'] .= '?';
-            } else {
-                $vars['_url'] .= '&';
-            }
-
-            $vars['_url'] .= $urlQuery;
+            // The URL carries no query string. The parameters, the session
+            // id and the sequence all go in the request body, and a web
+            // request's query string wins over its body when the evidence is
+            // read back, so values rendered here would override the newer
+            // values the script puts in the body.
+            $vars['_url'] = $vars['_protocol'] . '://' . $vars['_host'] . $endpoint;
 
             $vars['_updateEnabled'] = true;
         } else {
@@ -175,6 +171,11 @@ class JavascriptBuilderElement extends FlowElement
             $vars['_supportsPromises'] = false;
         }
 
+        // Use results from device detection if available to determine
+        // if the browser supports fetch, as the .NET builder does. Without
+        // them the script uses XMLHttpRequest.
+        $vars['_supportsFetch'] = $this->supportsFetch($flowData);
+
         // Check if any delayedproperties exist in the json
         $vars['_hasDelayedProperties'] = strpos($vars['_jsonObject'], 'delayexecution') !== false;
         $vars['_sessionId'] = $flowData->evidence->get('query.session-id');
@@ -185,21 +186,9 @@ class JavascriptBuilderElement extends FlowElement
             $vars['_enableCookies'] = strtolower($enableCookies) === 'true';
         }
 
-        // Left out after the URL above is built, because the record of a
-        // request's inputs is taken from these parameters and a session id
-        // that differs on every page view would stop it ever matching, so the
-        // cached response would be thrown away and the snippets would run
-        // again on every page.
-        $jsParams = [];
-        foreach ($params as $param => $paramValue) {
-            if (in_array($param, self::EXCLUDED_PARAMETERS, true)) {
-                continue;
-            }
-            $paramKey = explode('.', $param)[1];
-            $jsParams[$paramKey] = $paramValue;
-        }
-
-        $vars['_parameters'] = json_encode($jsParams);
+        $vars['_parameters'] = json_encode(
+            (object) $this->getParameters($flowData->evidence->getAll())
+        );
 
         $output = (new \Mustache_Engine())->render(
             file_get_contents(__DIR__ . '/../javascript-templates/JavaScriptResource.mustache'),
@@ -214,5 +203,66 @@ class JavascriptBuilderElement extends FlowElement
         $data = new ElementDataDictionary($this, ['javascript' => $output]);
 
         $flowData->setElementData($data);
+    }
+
+    /**
+     * The parameters the script is configured with, which it puts into the
+     * request body as they are. Only query evidence is taken, and the key is
+     * everything after the 'query.' prefix, so 'query.id.usage' becomes
+     * 'id.usage'. The session id and the sequence are left out, because the
+     * record of a request's inputs is taken from these parameters and a
+     * session id that differs on every page view would stop it ever
+     * matching, so the cached response would be thrown away and the
+     * snippets would run again on every page. Keys and values are encoded
+     * as the .NET builder encodes them.
+     *
+     * @param array<string, mixed> $evidence All the evidence
+     * @return array<string, string>
+     */
+    private function getParameters(array $evidence): array
+    {
+        $parameters = [];
+        foreach ($evidence as $key => $value) {
+            if (
+                stripos($key, 'query.') !== 0 ||
+                in_array($key, self::EXCLUDED_PARAMETERS, true) ||
+                !is_scalar($value)
+            ) {
+                continue;
+            }
+            $name = substr($key, strlen('query.'));
+            $parameters[self::encode($name)] = self::encode((string) $value);
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * Encode a value as .NET's WebUtility.UrlEncode does, which is PHP's
+     * urlencode with '!', '*', '(' and ')' left alone.
+     */
+    private static function encode(string $value): string
+    {
+        return str_replace(
+            ['%21', '%2A', '%28', '%29'],
+            ['!', '*', '(', ')'],
+            urlencode($value)
+        );
+    }
+
+    /**
+     * True where device detection says the browser supports fetch. False
+     * where there is no device data or no fetch property.
+     */
+    private function supportsFetch(FlowData $flowData): bool
+    {
+        try {
+            $fetch = $flowData->get('device')->get('fetch');
+            return $fetch instanceof AspectPropertyValue &&
+                $fetch->hasValue &&
+                $fetch->value === true;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }
