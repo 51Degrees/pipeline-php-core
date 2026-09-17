@@ -123,9 +123,12 @@ class JavascriptBuilderElement extends FlowElement
      * The template writes the sequence as bare code (var sequence = ...;), so
      * anything other than a whole number would stop the script parsing, or
      * change what it does. A pipeline without a SequenceElement passes the
-     * query string's value, or nothing at all, straight through. As the
-     * pipeline specification says, a value that is not a positive 32 bit
-     * integer becomes 1.
+     * query string's value, or nothing at all, straight through, and the
+     * pipeline specification requires 1 in that case. This builder goes a
+     * little further than the specification currently says and renders 1
+     * for any value that is not a positive 32 bit integer, because the
+     * script counts its own requests up from this number and cannot use
+     * zero or a negative one.
      *
      * @param mixed $value The query.sequence evidence, or null
      */
@@ -137,10 +140,12 @@ class JavascriptBuilderElement extends FlowElement
     /**
      * The session id to render into the script.
      *
-     * The template writes the session id inside quotes without any escaping.
-     * As the pipeline specification says, a session id that is not 1 to 64
-     * ASCII letters, digits and hyphens is rendered as an empty string,
-     * whether it came from the SequenceElement or from the query string.
+     * The template writes the session id inside quotes without any escaping,
+     * so a session id that is not 1 to 64 ASCII letters, digits and hyphens
+     * is rendered as an empty string, whether it came from the
+     * SequenceElement or from the query string. This is the rule proposed
+     * for the pipeline specification in 51Degrees/specifications pull
+     * request 31, which is still open.
      *
      * @param mixed $value The query.session-id evidence, or null
      */
