@@ -30,6 +30,12 @@ namespace fiftyone\pipeline\core;
  */
 class Evidence
 {
+    /**
+     * PHP's own default for max_input_vars, used where the setting cannot
+     * be read. See maxInputVars().
+     */
+    private const DEFAULT_MAX_INPUT_VARS = 1000;
+
     protected FlowData $flowData;
 
     /**
@@ -170,10 +176,10 @@ class Evidence
      * changed the changed one is dropped in favour of the name that was
      * sent.
      *
-     * A name written in the array form, such as 'a[b]', is left to PHP,
-     * which builds an array from it. A multipart body cannot be read a
-     * second time, so a dotted name sent in one keeps the underscore PHP
-     * gave it.
+     * Only a name holding a dot is put back, see isDottedName(). A name
+     * written in the array form, such as 'a[b]', is left to PHP, which
+     * builds an array from it. A multipart body cannot be read a second
+     * time, so a dotted name sent in one keeps the underscore PHP gave it.
      *
      * @param array<string, string> $server Key-value pairs for the HTTP headers
      * @return array<string, int|string>
@@ -196,11 +202,11 @@ class Evidence
         }
 
         foreach ($sent as $name => $value) {
-            $asPhpGivesIt = static::asPhpGivesIt($name);
-            if ($asPhpGivesIt === $name) {
+            if (static::isDottedName($name) === false) {
                 continue;
             }
-            unset($query[$asPhpGivesIt]);
+
+            unset($query[static::asPhpGivesIt($name)]);
             $query[$name] = $value;
         }
 
@@ -219,9 +225,18 @@ class Evidence
             return false;
         }
 
-        $type = strtolower((string) ($server['CONTENT_TYPE'] ?? ''));
+        // Some SAPI and proxy configurations pass the content type on only
+        // as HTTP_CONTENT_TYPE. Reading CONTENT_TYPE alone left the body
+        // unread on those, so a dotted name posted in a form body kept the
+        // underscore with nothing to say the request had not been re-read.
+        $contentType = $server['CONTENT_TYPE']
+            ?? $server['HTTP_CONTENT_TYPE']
+            ?? '';
 
-        return strpos($type, 'application/x-www-form-urlencoded') === 0;
+        return strpos(
+            strtolower((string) $contentType),
+            'application/x-www-form-urlencoded'
+        ) === 0;
     }
 
     /**
@@ -241,16 +256,29 @@ class Evidence
      * last value, as PHP does. A name in the array form is skipped, because
      * PHP builds an array for it and this is not trying to replace that.
      *
+     * Reading stops after max_input_vars names, which is where PHP itself
+     * stops filling $_GET and $_POST. Without the limit a request could
+     * carry any number of names past the point PHP would have given up, and
+     * every one of them would be offered to every flow element in the
+     * pipeline.
+     *
      * @return array<string, string>
      */
     protected static function parseFormEncoded(string $raw): array
     {
         $values = [];
+        $remaining = static::maxInputVars();
 
         foreach (explode('&', $raw) as $pair) {
             if ($pair === '') {
                 continue;
             }
+
+            if ($remaining <= 0) {
+                break;
+            }
+
+            --$remaining;
 
             $split = strpos($pair, '=');
             $name = urldecode($split === false ? $pair : substr($pair, 0, $split));
@@ -268,12 +296,46 @@ class Evidence
     }
 
     /**
-     * The name PHP gives a parameter in $_GET and $_POST, which is the name
-     * that was sent with each dot and space replaced by an underscore.
+     * Whether a name sent by the browser is one whose dots are put back.
+     *
+     * A dot is put back because it separates the parts of the names the
+     * cloud service reads, such as 'id.usage'. A space is not: no name the
+     * service reads holds one, PHP strips a leading space rather than
+     * replacing it so the name it gave could not be found to drop, and
+     * putting the space back produced an evidence key with a space in it,
+     * such as 'query.user agent' for a request sending 'user+agent', which
+     * nothing downstream matches. A name holding both is left to PHP whole,
+     * because putting back only the dot would leave PHP's name in place
+     * beside it and the evidence would carry the parameter twice.
+     */
+    protected static function isDottedName(string $name): bool
+    {
+        return strpos($name, '.') !== false && strpos($name, ' ') === false;
+    }
+
+    /**
+     * The name PHP gives a parameter in $_GET and $_POST. Only a name
+     * holding a dot and no space reaches here, see isDottedName(), so
+     * replacing the dot is the whole of it.
      */
     protected static function asPhpGivesIt(string $name): string
     {
-        return str_replace(['.', ' '], '_', $name);
+        return str_replace('.', '_', $name);
+    }
+
+    /**
+     * How many parameters PHP itself would keep from one input source,
+     * which is how many are read from the request here.
+     *
+     * ini_get returns false where the setting cannot be read, and a value
+     * of zero or less would drop every parameter, so PHP's documented
+     * default stands in for both.
+     */
+    protected static function maxInputVars(): int
+    {
+        $configured = (int) ini_get('max_input_vars');
+
+        return $configured > 0 ? $configured : self::DEFAULT_MAX_INPUT_VARS;
     }
 
     /**

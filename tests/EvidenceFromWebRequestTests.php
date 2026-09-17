@@ -138,6 +138,89 @@ class EvidenceFromWebRequestTests extends TestCase
         );
     }
 
+    public function testNameSentWithASpaceIsLeftToPhp(): void
+    {
+        // What PHP itself puts in $_GET for '?user+agent=x'. No name the
+        // cloud service reads holds a space, so PHP's name stands and the
+        // evidence does not gain a key with a space in it.
+        $_GET = ['user_agent' => 'x'];
+
+        $evidence = $this->evidenceFor(['QUERY_STRING' => 'user+agent=x']);
+
+        $this->assertSame('x', $evidence->get('query.user_agent'));
+        $this->assertNull($evidence->get('query.user agent'));
+    }
+
+    public function testNameSentWithADotAndASpaceIsLeftToPhp(): void
+    {
+        // Putting the dot back on its own would leave PHP's 'a_b_c' in
+        // place beside 'a.b c', because the two are no longer the same
+        // name, and the evidence would carry the parameter twice.
+        $_GET = ['a_b_c' => '1'];
+
+        $evidence = $this->evidenceFor(['QUERY_STRING' => 'a.b+c=1']);
+
+        $this->assertSame('1', $evidence->get('query.a_b_c'));
+        $this->assertNull($evidence->get('query.a.b c'));
+    }
+
+    public function testNameSentWithALeadingSpaceIsLeftToPhp(): void
+    {
+        // PHP strips a leading space rather than replacing it, so the name
+        // it gave cannot be found to drop and the parameter would arrive
+        // under both names at once.
+        $_GET = ['lead' => '1'];
+
+        $evidence = $this->evidenceFor(['QUERY_STRING' => '+lead=1']);
+
+        $this->assertSame('1', $evidence->get('query.lead'));
+        $this->assertNull($evidence->get('query. lead'));
+    }
+
+    public function testFormBodyIsReadWhenTheContentTypeArrivesAsAHeader(): void
+    {
+        // Some SAPI and proxy configurations pass the content type on only
+        // as HTTP_CONTENT_TYPE. Reading CONTENT_TYPE alone left the body
+        // unread on those and the dot was lost with nothing to say so.
+        $_POST = ['id_usage' => 'standard'];
+
+        $evidence = $this->evidenceFor(
+            [
+                'REQUEST_METHOD' => 'POST',
+                'HTTP_CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+            ],
+            'id.usage=standard'
+        );
+
+        $this->assertSame('standard', $evidence->get('query.id.usage'));
+        $this->assertNull($evidence->get('query.id_usage'));
+    }
+
+    public function testReadingTheRequestStopsWherePhpStops(): void
+    {
+        // PHP gives up at max_input_vars, so reading the request again
+        // gives up in the same place. Without the limit a request could
+        // carry any number of names past the point PHP would have stopped
+        // at, and each one is offered to every flow element in turn.
+        $limit = (int) ini_get('max_input_vars');
+        $this->assertGreaterThan(0, $limit, 'max_input_vars is readable');
+
+        $sent = [];
+        for ($index = 0; $index < $limit + 10; $index++) {
+            $sent[] = 'id.usage' . $index . '=standard';
+        }
+
+        $evidence = $this->evidenceFor(
+            ['QUERY_STRING' => implode('&', $sent)]
+        );
+
+        $this->assertSame(
+            'standard',
+            $evidence->get('query.id.usage' . ($limit - 1))
+        );
+        $this->assertNull($evidence->get('query.id.usage' . $limit));
+    }
+
     public function testArrayFormIsLeftToPhp(): void
     {
         // PHP builds an array for 'a[b]=1', which this does not replace.
