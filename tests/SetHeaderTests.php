@@ -75,6 +75,47 @@ class SetHeaderTests extends TestCase
                     ])
                 ],
                 'SEC-CH-UA,SEC-CH-UA-Full-Version,SEC-CH-UA-Model,SEC-CH-UA-Mobile,SEC-CH-UA-Arch,SEC-CH-UA-Platform,SEC-CH-UA-Platform-Version'
+            ],
+            [
+                // The values the cloud service returns today, where the
+                // browser property asks for Sec-CH-UA-Mobile and
+                // Sec-CH-UA-Platform and the hardware and platform
+                // properties ask for them again. Each hint belongs in the
+                // header once, which is what the .NET pipeline sends.
+                [
+                    'device' => new TestDataDictionary(null, [
+                        'setheaderbrowseraccept-ch' => new AspectPropertyValue(
+                            null,
+                            'Sec-CH-UA,Sec-CH-UA-Full-Version-List,Sec-CH-UA-Mobile,Sec-CH-UA-Platform'
+                        ),
+                        'setheaderplatformaccept-ch' => new AspectPropertyValue(
+                            null,
+                            'Sec-CH-UA-Platform,Sec-CH-UA-Platform-Version'
+                        ),
+                        'setheaderhardwareaccept-ch' => new AspectPropertyValue(
+                            null,
+                            'Sec-CH-UA-Model,Sec-CH-UA-Mobile'
+                        )
+                    ])
+                ],
+                'Sec-CH-UA,Sec-CH-UA-Full-Version-List,Sec-CH-UA-Mobile,Sec-CH-UA-Platform,Sec-CH-UA-Model,Sec-CH-UA-Platform-Version'
+            ],
+            [
+                // A value with spaces after the commas, which a header may
+                // carry, gives the same header as one without.
+                [
+                    'device' => new TestDataDictionary(null, [
+                        'setheaderbrowseraccept-ch' => new AspectPropertyValue(
+                            null,
+                            'Sec-CH-UA, Sec-CH-UA-Mobile'
+                        ),
+                        'setheaderhardwareaccept-ch' => new AspectPropertyValue(
+                            null,
+                            'Sec-CH-UA-Mobile'
+                        )
+                    ])
+                ],
+                'Sec-CH-UA,Sec-CH-UA-Mobile'
             ]
         ];
     }
