@@ -97,7 +97,13 @@ class SetHeaderElement extends FlowElement
      */
     public function getResponseHeaderValue(FlowData $flowData, array $setHeaderPropertiesDict): array
     {
-        $responseHeadersDict = [];
+        // Each header name against the client hints asked for under it, in
+        // the order they were first added. Several properties ask for the
+        // same hint, for example Sec-CH-UA-Mobile, which both the browser
+        // and the hardware properties name, so a hint already asked for is
+        // not added again.
+        /** @var array<string, array<int, string>> $wanted */
+        $wanted = [];
 
         // Loop over all the flowElements to process Set Header properties for User Agent Client Hints
         foreach ($setHeaderPropertiesDict as $elementDataKey => $setHeaderElementList) {
@@ -109,20 +115,24 @@ class SetHeaderElement extends FlowElement
                 // Get SetHeader property value from elementData
                 $setHeaderValue = $this->getPropertyValue($flowData, $elementDataKey, $setHeaderProperty);
 
-                if (isset($responseHeadersDict[$responseHeader])) {
-                    $responseHeaderValue = $responseHeadersDict[$responseHeader];
-                    if ($responseHeaderValue == '') {
-                        $responseHeaderValue = $setHeaderValue;
-                    } else {
-                        if ($setHeaderValue != '') {
-                            $responseHeaderValue = $responseHeaderValue . ',' . $setHeaderValue;
-                        }
+                if (!isset($wanted[$responseHeader])) {
+                    $wanted[$responseHeader] = [];
+                }
+
+                foreach (explode(',', $setHeaderValue) as $hint) {
+                    $hint = trim($hint);
+
+                    if ($hint !== ''
+                        && !in_array($hint, $wanted[$responseHeader], true)) {
+                        $wanted[$responseHeader][] = $hint;
                     }
-                    $responseHeadersDict[$responseHeader] = $responseHeaderValue;
-                } else {
-                    $responseHeadersDict[$responseHeader] = $setHeaderValue;
                 }
             }
+        }
+
+        $responseHeadersDict = [];
+        foreach ($wanted as $responseHeader => $hints) {
+            $responseHeadersDict[$responseHeader] = implode(',', $hints);
         }
 
         return $responseHeadersDict;
