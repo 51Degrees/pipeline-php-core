@@ -33,4 +33,10 @@ class Constants
     public const SETHEADER_ELEMENT_KEY = 'set-headers';
     public const SETHEADER_DATA_KEY = 'responseheaderdictionary';
     public const ACCEPTCH_HEADER = 'Accept-CH';
+
+    /**
+     * The evidence key the page request uses to ask for a different name
+     * for the client side object.
+     */
+    public const EVIDENCE_OBJECT_NAME = 'query.fod-js-object-name';
 }
