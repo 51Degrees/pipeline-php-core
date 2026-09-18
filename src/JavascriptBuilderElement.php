@@ -53,6 +53,17 @@ class JavascriptBuilderElement extends FlowElement
     private const EXCLUDED_PARAMETERS = ['query.session-id', 'query.sequence'];
 
     /**
+     * The sequence the script is rendered with when the evidence holds no
+     * usable value.
+     */
+    private const DEFAULT_SEQUENCE = 1;
+
+    /**
+     * The largest sequence, which is the largest 32 bit signed integer.
+     */
+    public const MAX_SEQUENCE = 2147483647;
+
+    /**
      * @var array<string, mixed>
      */
     public array $settings;
@@ -75,6 +86,73 @@ class JavascriptBuilderElement extends FlowElement
         $this->minify = $settings['minify'] ?? true;
 
         parent::__construct();
+    }
+
+    /**
+     * A sequence as a positive 32 bit integer, or null when the value cannot
+     * be used as one.
+     *
+     * @param mixed $value The query.sequence evidence, or null
+     */
+    public static function parseSequence($value): ?int
+    {
+        if (is_int($value)) {
+            return $value >= 1 && $value <= self::MAX_SEQUENCE ? $value : null;
+        }
+
+        if (!is_string($value) || preg_match('/^\s*\+?[0-9]+\s*$/D', $value) !== 1) {
+            return null;
+        }
+
+        // The range is checked on the digits, because casting a number that
+        // is too large gives the largest integer rather than failing. Every
+        // leading zero is dropped first, so no digits left means zero, which
+        // is not a sequence.
+        $digits = ltrim(ltrim(trim($value, " \t\n\r\v\f"), '+'), '0');
+        if ($digits === '' || strlen($digits) > 10 ||
+            (strlen($digits) === 10 && strcmp($digits, '2147483647') > 0)) {
+            return null;
+        }
+
+        return (int) $digits;
+    }
+
+    /**
+     * The sequence to render into the script.
+     *
+     * The template writes the sequence as bare code (var sequence = ...;), so
+     * anything other than a whole number would stop the script parsing, or
+     * change what it does. A pipeline without a SequenceElement passes the
+     * query string's value, or nothing at all, straight through, and the
+     * pipeline specification requires 1 in that case. This builder goes a
+     * little further than the specification currently says and renders 1
+     * for any value that is not a positive 32 bit integer, because the
+     * script counts its own requests up from this number and cannot use
+     * zero or a negative one.
+     *
+     * @param mixed $value The query.sequence evidence, or null
+     */
+    public static function getSequence($value): int
+    {
+        return self::parseSequence($value) ?? self::DEFAULT_SEQUENCE;
+    }
+
+    /**
+     * The session id to render into the script.
+     *
+     * The template writes the session id inside quotes without any escaping,
+     * so a session id that is not 1 to 64 ASCII letters, digits and hyphens
+     * is rendered as an empty string, whether it came from the
+     * SequenceElement or from the query string. This is the rule proposed
+     * for the pipeline specification in 51Degrees/specifications pull
+     * request 31, which is still open.
+     *
+     * @param mixed $value The query.session-id evidence, or null
+     */
+    public static function getSessionId($value): string
+    {
+        return is_string($value) && preg_match('/^[A-Za-z0-9-]{1,64}$/D', $value) === 1
+            ? $value : '';
     }
 
     /**
@@ -177,8 +255,12 @@ class JavascriptBuilderElement extends FlowElement
 
         // Check if any delayedproperties exist in the json
         $vars['_hasDelayedProperties'] = strpos($vars['_jsonObject'], 'delayexecution') !== false;
-        $vars['_sessionId'] = $flowData->evidence->get('query.session-id');
-        $vars['_sequence'] = $flowData->evidence->get('query.sequence');
+        // Both are written into the script, so each always has a safe value.
+        // The session id is written inside quotes and is empty when absent or
+        // not safe, and the sequence is written as bare code, so it is always
+        // a positive number.
+        $vars['_sessionId'] = self::getSessionId($flowData->evidence->get('query.session-id'));
+        $vars['_sequence'] = self::getSequence($flowData->evidence->get('query.sequence'));
 
         $enableCookies = $flowData->evidence->get('query.fod-js-enable-cookies');
         if ($enableCookies !== null) {
