@@ -225,7 +225,9 @@ class JavaScriptBuilderObjectNameTests extends TestCase
     {
         return [
             'statement' => ['a;b', true],
-            'leading digit' => ['9bad', true],
+            // No hex letters in the name, so the random session id in the
+            // script cannot contain it by chance.
+            'leading digit' => ['9zap', true],
             'quote' => ['x"y', true],
             'empty' => ['', false],
             // A reserved word is also an ordinary word in the script's
