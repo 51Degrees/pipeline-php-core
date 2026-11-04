@@ -49,6 +49,14 @@ class Pipeline
     public bool $suppressProcessExceptions;
 
     /**
+     * If true, the default, closing the Pipeline closes its FlowElements.
+     * Set the autoCloseElements setting to false when the elements are
+     * shared with another Pipeline, and close each element once every
+     * Pipeline using it is finished with.
+     */
+    public bool $autoCloseElements;
+
+    /**
      * @var array<string, array<string, array<string, array<string, string>>>>
      */
     public array $propertyDatabase;
@@ -69,6 +77,8 @@ class Pipeline
          * first element.
          */
         $this->suppressProcessExceptions = (bool) ($settings['suppressProcessExceptions'] ?? false);
+
+        $this->autoCloseElements = (bool) ($settings['autoCloseElements'] ?? true);
 
         $this->flowElements = $flowElements;
 
@@ -91,6 +101,39 @@ class Pipeline
     public function createFlowData(): FlowData
     {
         return new FlowData($this);
+    }
+
+    /**
+     * Close the FlowElements that have a close method, which releases the
+     * native resources they hold, unless the autoCloseElements setting is
+     * false. Call it in a finally block once the Pipeline is finished with.
+     *
+     * FlowData created by the Pipeline are not closed by it. Close each one
+     * as well, because the results it holds keep the engine's data in memory
+     * until they are released.
+     */
+    public function close(): void
+    {
+        if (!$this->autoCloseElements) {
+            return;
+        }
+
+        // Every element is closed even if one fails, and the first failure
+        // is thrown once they all have been.
+        $failure = null;
+        foreach ($this->flowElements as $flowElement) {
+            if (!method_exists($flowElement, 'close')) {
+                continue;
+            }
+            try {
+                $flowElement->close();
+            } catch (\Throwable $e) {
+                $failure = $failure ?? $e;
+            }
+        }
+        if ($failure !== null) {
+            throw $failure;
+        }
     }
 
     public function log(string $level, string $message): void

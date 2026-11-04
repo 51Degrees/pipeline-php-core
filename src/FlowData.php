@@ -108,6 +108,26 @@ class FlowData
     }
 
     /**
+     * Release the native resources held by the element data in this
+     * FlowData, such as the results of an on-premise engine, which keep the
+     * engine's data in memory until they are released. Call it in a finally
+     * block once the FlowData is finished with, so that this happens
+     * straight away rather than when the garbage collector next runs.
+     *
+     * Only element data with a close method of its own is closed, so element
+     * data that needs no cleanup, such as an entry in a results cache, is
+     * left alone. Values already read are unaffected.
+     */
+    public function close(): void
+    {
+        foreach ($this->data as $elementData) {
+            if (method_exists($elementData, 'close')) {
+                $elementData->close();
+            }
+        }
+    }
+
+    /**
      * Retrieve data by FlowElement object.
      */
     public function getFromElement(FlowElement $flowElement): ElementData

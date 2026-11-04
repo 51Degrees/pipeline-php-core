@@ -89,6 +89,12 @@ class JavascriptBuilderElement extends FlowElement
     public string $dataKey = 'javascriptbuilder';
 
     /**
+     * Set once a callback URL that is not valid has been logged, because a
+     * misconfigured element would otherwise log on every request.
+     */
+    private bool $invalidUrlLogged = false;
+
+    /**
      * @param array<string, mixed> $settings 'objName' is the name of the
      * client side object, 'fod' when absent or null. The page request can
      * ask for a different name with the 'query.fod-js-object-name' evidence.
@@ -192,9 +198,8 @@ class JavascriptBuilderElement extends FlowElement
      * The template writes the session id inside quotes without any escaping,
      * so a session id that is not 1 to 64 ASCII letters, digits and hyphens
      * is rendered as an empty string, whether it came from the
-     * SequenceElement or from the query string. This is the rule proposed
-     * for the pipeline specification in 51Degrees/specifications pull
-     * request 31, which is still open.
+     * SequenceElement or from the query string, as the pipeline
+     * specification says.
      *
      * @param mixed $value The query.session-id evidence, or null
      */
@@ -265,26 +270,31 @@ class JavascriptBuilderElement extends FlowElement
         $vars['_host'] = $host;
         $vars['_protocol'] = $protocol;
 
-        $endpoint = $vars['_endpoint'];
+        // The URL is the protocol, the host and the endpoint, and
+        // CallbackUrl checks it. It carries no query string. The parameters,
+        // the session id and the sequence all go in the request body, and a
+        // web request's query string wins over its body when the evidence is
+        // read back, so values rendered here would override the newer values
+        // the script puts in the body.
+        $url = CallbackUrl::of(
+            $vars['_protocol'],
+            $vars['_host'],
+            $vars['_endpoint']
+        );
+        if ($url !== null && !$url->valid && !$this->invalidUrlLogged) {
+            $this->invalidUrlLogged = true;
+            $flowData->pipeline->log(
+                'error',
+                'The generated URL ' . self::quotedForLog($url->url) .
+                ' is not valid, so the JavaScript has no callback URL. ' .
+                "Check the JavaScript builder's protocol, host and " .
+                'endpoint, and the protocol and host evidence. ' .
+                'This is reported once.'
+            );
+        }
 
-        if ($vars['_host'] && $vars['_protocol'] && $endpoint) {
-            // One slash between the host and the endpoint, as the .NET
-            // builder does.
-            $endpointHasSlash = $endpoint[0] === '/';
-            $hostHasSlash = substr($vars['_host'], -1) === '/';
-            if (!$endpointHasSlash && !$hostHasSlash) {
-                $endpoint = '/' . $endpoint;
-            } elseif ($endpointHasSlash && $hostHasSlash) {
-                $endpoint = substr($endpoint, 1);
-            }
-
-            // The URL carries no query string. The parameters, the session
-            // id and the sequence all go in the request body, and a web
-            // request's query string wins over its body when the evidence is
-            // read back, so values rendered here would override the newer
-            // values the script puts in the body.
-            $vars['_url'] = $vars['_protocol'] . '://' . $vars['_host'] . $endpoint;
-
+        if ($url !== null && $url->valid) {
+            $vars['_url'] = $url->url;
             $vars['_updateEnabled'] = true;
         } else {
             $vars['_updateEnabled'] = false;
@@ -380,6 +390,19 @@ class JavascriptBuilderElement extends FlowElement
         }
 
         return $parameters;
+    }
+
+    /**
+     * Text quoted for a log message, with the control characters and every
+     * character outside ASCII escaped so that it cannot start a new log
+     * line.
+     */
+    private static function quotedForLog(string $text): string
+    {
+        return (string) json_encode(
+            $text,
+            JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE
+        );
     }
 
     /**

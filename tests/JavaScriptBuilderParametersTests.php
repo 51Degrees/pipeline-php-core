@@ -26,8 +26,24 @@ namespace fiftyone\pipeline\core\tests;
 use fiftyone\pipeline\core\AspectPropertyValue;
 use fiftyone\pipeline\core\ElementDataDictionary;
 use fiftyone\pipeline\core\FlowElement;
+use fiftyone\pipeline\core\Logger;
 use fiftyone\pipeline\core\PipelineBuilder;
 use PHPUnit\Framework\TestCase;
+
+/**
+ * Keeps the errors the pipeline logs, so the tests can read them.
+ */
+class CallbackUrlTestLogger extends Logger
+{
+    public array $errors = [];
+
+    public function logInternal(array $log): void
+    {
+        if ($log['level'] === 'error') {
+            $this->errors[] = $log['message'];
+        }
+    }
+}
 
 /**
  * Stands in for device detection, offering only the one property given.
@@ -233,6 +249,122 @@ class JavaScriptBuilderParametersTests extends TestCase
                 $script
             );
         }
+    }
+
+    /**
+     * A host the check refuses gives a script with no callback, and the
+     * refusal is logged as an error the first time only, whatever the
+     * requests in between.
+     */
+    public function testRefusedUrlIsLeftOutAndLoggedOnce()
+    {
+        [$scripts, $errors] = $this->renderWithHosts(
+            ['exa mple.com', 'exa mple.com', 'example.com', 'exa mple.com']
+        );
+
+        foreach ($scripts as $i => $script) {
+            $this->assertStringContainsString(
+                'new fiftyoneDegreesManager()',
+                $script
+            );
+            if ($i === 2) {
+                $this->assertContains(
+                    'https://example.com/json',
+                    $this->requestUrls($script)
+                );
+            } else {
+                $this->assertSame([], $this->requestUrls($script));
+                $this->assertStringNotContainsString('exa mple.com', $script);
+            }
+        }
+        $this->assertCount(1, $errors, json_encode($errors));
+        $this->assertStringContainsString(
+            '"https://exa mple.com/json"',
+            $errors[0]
+        );
+    }
+
+    /**
+     * The URL is quoted and escaped in the log, so a line break in it cannot
+     * start a new log line.
+     */
+    public function testRefusedUrlIsLoggedOnOneLine()
+    {
+        [, $errors] = $this->renderWithHosts(["a\nb.com\r\u{2028}"]);
+
+        $this->assertCount(1, $errors, json_encode($errors));
+        foreach (["\n", "\r", "\u{2028}"] as $c) {
+            $this->assertStringNotContainsString($c, $errors[0]);
+        }
+        $this->assertStringContainsString('a\nb.com\r\u2028', $errors[0]);
+    }
+
+    /**
+     * A host made only of whitespace is not set, so the script has no
+     * callback and nothing is logged.
+     */
+    public function testBlankHostGivesNoCallbackAndIsNotLogged()
+    {
+        [$scripts, $errors] = $this->renderWithHosts(['  ']);
+
+        $this->assertSame([], $this->requestUrls($scripts[0]));
+        $this->assertSame([], $errors);
+    }
+
+    /**
+     * A host from the request reaches the script as the check writes it, in
+     * lower case and with anything that could end the string the script
+     * holds it in percent-encoded.
+     */
+    public function testHostFromTheRequestIsWrittenAsChecked()
+    {
+        [$scripts] = $this->renderWithHosts(["EXAMPLE.com/');alert(1);//"]);
+
+        $urls = $this->requestUrls($scripts[0]);
+        $this->assertNotEmpty($urls);
+        foreach ($urls as $url) {
+            $this->assertSame('https://example.com/%27);alert(1);//json', $url);
+        }
+        $this->assertStringNotContainsString("');alert(1)", $scripts[0]);
+    }
+
+    /**
+     * Renders one script for each host given, all through the same element,
+     * and returns them with the errors the pipeline logged.
+     */
+    private function renderWithHosts(array $hosts): array
+    {
+        $logger = new CallbackUrlTestLogger('error');
+        $pipeline = (new PipelineBuilder([
+            'javascriptBuilderSettings' => [
+                'endpoint' => '/json',
+                'minify' => false
+            ]
+        ]))->addLogger($logger)->build();
+        $scripts = [];
+        foreach ($hosts as $host) {
+            $flowData = $pipeline->createFlowData();
+            $flowData->evidence->set('header.host', $host);
+            $flowData->process();
+            $scripts[] = $flowData->javascriptbuilder->javascript;
+        }
+
+        return [$scripts, $logger->errors];
+    }
+
+    /**
+     * The URLs the script sends its request to, from the fetch and the
+     * XMLHttpRequest calls.
+     */
+    private function requestUrls(string $script): array
+    {
+        preg_match_all(
+            "/(?:fetch\\(|createCORSRequest\\('POST', )'([^']*)'/",
+            $script,
+            $matches
+        );
+
+        return $matches[1];
     }
 
     private function render(

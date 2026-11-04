@@ -3,9 +3,9 @@
 
 # 51Degrees PHP Pipeline Core
 
-![51Degrees](https://51degrees.com/img/logo.png?utm_source=github&utm_medium=readme&utm_campaign=51degrees-php&utm_content=readme.md&utm_term=51degrees-php-pipeline-core "Data rewards the curious") **PHP Pipeline API**
+![51Degrees](https://51degrees.com/img/logo.png?utm_source=packagist&utm_medium=package&utm_campaign=51degrees-php&utm_content=fiftyone.pipeline.core&utm_term=51degrees-php-pipeline-core "Data rewards the curious") **PHP Pipeline API**
 
-[Developer Documentation](https://51degrees.com/documentation/index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-php&utm_content=readme.md&utm_term=51degrees-php-pipeline-core"developer documentation")
+[Developer Documentation](https://51degrees.com/documentation/index.html?utm_source=packagist&utm_medium=package&utm_campaign=51degrees-php&utm_content=fiftyone.pipeline.core&utm_term=51degrees-php-pipeline-core"developer documentation")
 
 ## Introduction
 This project contains the core source code for the PHP implementation of the 51Degrees Pipeline API.
@@ -15,7 +15,7 @@ The Pipeline is a generic micro-services aggregation solution with the ability t
 
 ## Dependencies
 
-The [tested versions](https://51degrees.com/documentation/_info__tested_versions.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-php&utm_content=readme.md&utm_term=dependencies) page shows 
+The [tested versions](https://51degrees.com/documentation/_product_summaries__tested_versions.html?utm_source=packagist&utm_medium=package&utm_campaign=51degrees-php&utm_content=fiftyone.pipeline.core&utm_term=dependencies) page shows 
 the PHP versions that we currently test against. The software may run fine against other versions, 
 but additional caution should be applied.
 
@@ -40,7 +40,7 @@ There are several examples available that demonstrate how to make use of the Pip
 isolation. These are described in the table below.
 If you want examples that demonstrate how to use 51Degrees products such as device detection, 
 then these are available in the corresponding [repository](https://github.com/51Degrees/51degrees-php/tree/main/device-detection/cloud) 
-and on our [website](https://51degrees.com/documentation/_examples__device_detection__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-php&utm_content=readme.md&utm_term=examples).
+and on our [website](https://51degrees.com/documentation/_device_detection__examples__index.html?utm_source=packagist&utm_medium=package&utm_campaign=51degrees-php&utm_content=fiftyone.pipeline.core&utm_term=examples).
 
 | Example                                | Description |
 |----------------------------------------|-------------|
@@ -55,3 +55,10 @@ phpunit --fail-on-warning --display-warnings --log-junit test-results.xml
 
 ## Mustache template
 `javascript-templates` is not a full-fledged PHP package installable via `composer`, however, it is shipped as a regularly updated, static dependency of this package.
+
+## Find out more
+
+- [Build your own](https://51degrees.com/build-your-own?utm_source=packagist&utm_medium=package&utm_campaign=51degrees-php&utm_content=fiftyone.pipeline.core&utm_term=find-out-more-build-your-own)
+- [Pipeline API documentation](https://51degrees.com/documentation/_pipeline_api__index.html?utm_source=packagist&utm_medium=package&utm_campaign=51degrees-php&utm_content=fiftyone.pipeline.core&utm_term=find-out-more-documentation)
+- [Pipeline API examples](https://51degrees.com/documentation/_pipeline_api__examples__index.html?utm_source=packagist&utm_medium=package&utm_campaign=51degrees-php&utm_content=fiftyone.pipeline.core&utm_term=find-out-more-examples)
+- https://github.com/51Degrees/51degrees-php
