@@ -39,7 +39,7 @@ This will start a local web server listening on port 3000. Open your web browser
 There are several examples available that demonstrate how to make use of the Pipeline API in 
 isolation. These are described in the table below.
 If you want examples that demonstrate how to use 51Degrees products such as device detection, 
-then these are available in the corresponding [repository](https://github.com/51Degrees/device-detection-php) 
+then these are available in the corresponding [repository](https://github.com/51Degrees/51degrees-php/tree/main/device-detection/cloud) 
 and on our [website](https://51degrees.com/documentation/_examples__device_detection__index.html?utm_source=github&utm_medium=readme&utm_campaign=51degrees-php&utm_content=readme.md&utm_term=examples).
 
 | Example                                | Description |
